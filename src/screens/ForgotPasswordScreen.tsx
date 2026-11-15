@@ -70,7 +70,7 @@ export function ForgotPasswordScreen() {
       setStepStore('verify');
       showAlert({
         title: 'Código enviado',
-        message: `Hemos enviado un código de 6 dígitos a ${cleanEmail}. Revisa también tu carpeta de spam o correo no deseado.`,
+        message: `Hemos enviado el código de verificación a ${cleanEmail}. Revisa también tu carpeta de spam o correo no deseado.`,
         type: 'success',
       });
     } catch (err: any) {
@@ -93,7 +93,7 @@ export function ForgotPasswordScreen() {
     if (!cleanCode || cleanCode.length < 6) {
       return showAlert({
         title: 'Código incompleto',
-        message: 'Ingresa el código de 6 dígitos enviado a tu correo.',
+        message: 'Ingresa el código numérico recibido en tu correo.',
         type: 'warning',
       });
     }
@@ -369,7 +369,7 @@ export function ForgotPasswordScreen() {
               }}>
               {role === 'store'
                 ? stepStore === 'request'
-                  ? 'Ingresa tu correo registrado y te enviaremos un código de 6 dígitos para restablecerla.'
+                  ? 'Ingresa tu correo registrado y te enviaremos un código de seguridad para restablecerla.'
                   : `Ingresa el código que enviamos a tu correo ${email} y tu nueva contraseña.`
                 : 'Ingresa tu documento y confirma tu celular registrado para crear una nueva contraseña.'}
             </p>
@@ -418,9 +418,9 @@ export function ForgotPasswordScreen() {
                   <Input
                     label="Código de 6 dígitos"
                     value={otpCode}
-                    onChange={e => setOtpCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                    onChange={e => setOtpCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 8))}
                     placeholder="Ej: 123456"
-                    maxLength={6}
+                    maxLength={8}
                   />
 
                   <Input
