@@ -1,0 +1,1499 @@
+import React, { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import {
+  IoReceiptOutline,
+  IoStorefront,
+  IoStorefrontOutline,
+  IoLogOutOutline,
+  IoCalendar,
+  IoCalendarOutline,
+  IoSearch,
+  IoClose,
+  IoCloseCircle,
+  IoChevronForward,
+  IoCaretDown,
+  IoCall,
+  IoLocationOutline,
+  IoCallOutline,
+  IoArrowBack,
+  IoWallet,
+  IoCheckmarkCircle,
+  IoEllipseOutline,
+  IoLayersOutline,
+  IoAlertCircleOutline,
+  IoDownloadOutline,
+  IoNotifications,
+  IoNotificationsOutline,
+} from 'react-icons/io5';
+import { Card } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
+import { DynamicBrandCurves } from '../components/ui/DynamicBrandCurves';
+import { MagnetFilterBar } from '../components/ui/MagnetFilterBar';
+import { showAlert } from '../utils/alert';
+import { confirmLogout, CUSTOMER_LOGOUT_MESSAGE } from '../lib/session';
+import { fetchCustomerPortal } from '../services/customerPortal';
+import { setupRealtimeCustomerAlerts } from '../services/notificationService';
+import { NotificationSettingsModal } from '../components/ui/NotificationSettingsModal';
+import { Colors, Radius, formatCOP } from '../theme';
+import {
+  formatDateDisplay,
+  getBogotaCurrentMonthKey,
+  getBogotaMonthKey,
+} from '../utils/format';
+
+const MONTH_NAMES = [
+  'Enero',
+  'Febrero',
+  'Marzo',
+  'Abril',
+  'Mayo',
+  'Junio',
+  'Julio',
+  'Agosto',
+  'Septiembre',
+  'Octubre',
+  'Noviembre',
+  'Diciembre',
+];
+
+const MONTH_SHORT_NAMES = [
+  'Ene',
+  'Feb',
+  'Mar',
+  'Abr',
+  'May',
+  'Jun',
+  'Jul',
+  'Ago',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dic',
+];
+
+const getCurrentMonthKey = getBogotaCurrentMonthKey;
+const getMonthKeyFromDate = getBogotaMonthKey;
+
+const formatMonthLabel = (monthKey: string) => {
+  if (monthKey === 'all') {
+    return 'Todos los meses';
+  }
+  const [yearStr, monthStr] = monthKey.split('-');
+  const monthIdx = parseInt(monthStr, 10) - 1;
+  const monthName = MONTH_NAMES[monthIdx] || monthKey;
+  return `${monthName} ${yearStr}`;
+};
+
+const formatMonthHeader = (monthKey: string) => {
+  if (monthKey === 'all') {
+    return 'TODOS';
+  }
+  const [yearStr, monthStr] = monthKey.split('-');
+  const monthIdx = parseInt(monthStr, 10) - 1;
+  const monthName = MONTH_NAMES[monthIdx] || monthKey;
+  const currentYear = new Date().getFullYear().toString();
+  if (yearStr === currentYear) {
+    return monthName.toUpperCase();
+  }
+  const shortMonth = MONTH_SHORT_NAMES[monthIdx] || monthKey;
+  return `${shortMonth.toUpperCase()} ${yearStr}`;
+};
+
+const normalizeSearchText = (text: string) =>
+  text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+const generateAvailableMonths = (createdAt?: string | null) => {
+  const months: string[] = [];
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+
+  let pastLimitMonths = 12;
+  if (createdAt) {
+    try {
+      const createdDate = new Date(createdAt);
+      if (!isNaN(createdDate.getTime())) {
+        const diffYears = currentYear - createdDate.getFullYear();
+        const diffMonths =
+          diffYears * 12 + (currentMonth - createdDate.getMonth());
+        if (diffMonths > 12) {
+          pastLimitMonths = Math.min(diffMonths + 1, 36);
+        }
+      }
+    } catch (_e) {}
+  }
+
+  for (let i = 0; i < pastLimitMonths; i++) {
+    const d = new Date(currentYear, currentMonth - i, 1);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    months.push(`${y}-${m}`);
+  }
+  return months;
+};
+
+export function CustomerHomeScreen() {
+  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
+  const [filterType, setFilterType] = useState<'all' | 'credit' | 'payment'>('all');
+  const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonthKey);
+  const [isMonthModalVisible, setIsMonthModalVisible] = useState(false);
+  const [searchConcept, setSearchConcept] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
+  const [notifGranted, setNotifGranted] = useState<boolean>(() => {
+    return (
+      typeof window !== 'undefined' &&
+      'Notification' in window &&
+      Notification.permission === 'granted'
+    );
+  });
+
+  const handleOpenNotificationModal = () => {
+    setIsNotifModalOpen(true);
+  };
+
+  // Al cambiar o salir de la tienda seleccionada, restablecer filtros a mes actual
+  const handleSelectStore = (storeId: string | null) => {
+    setSelectedStoreId(storeId);
+    setSelectedMonth(getCurrentMonthKey());
+    setSearchConcept('');
+    setIsSearchOpen(false);
+    setFilterType('all');
+  };
+
+  const { data, isLoading, isFetching, isError, refetch } = useQuery({
+    queryKey: ['customer-portal', selectedStoreId, selectedMonth],
+    queryFn: () =>
+      fetchCustomerPortal({
+        storeId: selectedStoreId,
+        month: selectedMonth,
+      }),
+  });
+
+  React.useEffect(() => {
+    if (!data?.customer?.id) return;
+    const cleanup = setupRealtimeCustomerAlerts({
+      customerId: data.customer.id,
+      userId: data.customer.user_id,
+    });
+    return () => cleanup();
+  }, [data?.customer?.id, data?.customer?.user_id]);
+
+  const checkInternetConnection = (): boolean => {
+    if (!navigator.onLine) {
+      showAlert({
+        title: 'Sin conexión a internet',
+        message:
+          'Para consultar los movimientos de otro mes o traer más datos debes tener conexión a internet.',
+        type: 'warning',
+      });
+      return false;
+    }
+    return true;
+  };
+
+  const handleOpenMonthPicker = () => {
+    if (!checkInternetConnection()) return;
+    setIsMonthModalVisible(true);
+  };
+
+  const handleSelectMonth = (monthKey: string) => {
+    if (monthKey === selectedMonth) {
+      setIsMonthModalVisible(false);
+      return;
+    }
+    if (!checkInternetConnection()) return;
+    setSelectedMonth(monthKey);
+    setIsMonthModalVisible(false);
+  };
+
+  const stores = useMemo(() => data?.stores ?? [], [data?.stores]);
+  const customerName = data?.customer?.name ?? 'Cliente';
+
+  // Total acumulado que debe en todas las tiendas
+  const totalBalance = useMemo(() => {
+    return stores.reduce(
+      (sum: number, item: any) => sum + Number(item.current_balance || 0),
+      0,
+    );
+  }, [stores]);
+
+  // Tienda actualmente seleccionada
+  const selectedStore = useMemo(() => {
+    if (!selectedStoreId) return null;
+    return stores.find((s: any) => s.store_id === selectedStoreId) ?? null;
+  }, [selectedStoreId, stores]);
+
+  // Movimientos correspondientes a la tienda seleccionada
+  const storeMovements = useMemo(() => {
+    if (!selectedStoreId) return [];
+
+    const credits = (data?.credits ?? [])
+      .filter((c: any) => c.store_id === selectedStoreId)
+      .map((c: any) => ({
+        id: c.id,
+        kind: 'credit' as const,
+        title: c.concept || 'Compra fiada',
+        amount: Number(c.amount || 0),
+        date: c.created_at,
+        dueDate: c.due_date,
+        notes: null as string | null,
+      }));
+
+    const payments = (data?.payments ?? [])
+      .filter((p: any) => p.store_id === selectedStoreId)
+      .map((p: any) => ({
+        id: p.id,
+        kind: 'payment' as const,
+        title: p.notes ? `Abono: ${p.notes}` : 'Abono entregado a la tienda',
+        amount: Number(p.amount || 0),
+        date: p.payment_date,
+        dueDate: null as string | null,
+        notes: p.notes,
+      }));
+
+    return [...credits, ...payments].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+    );
+  }, [data, selectedStoreId]);
+
+  // Totales de la tienda seleccionada
+  const storeTotals = useMemo(() => {
+    let creditsSum = 0;
+    let paymentsSum = 0;
+    storeMovements.forEach(m => {
+      if (m.kind === 'credit') creditsSum += m.amount;
+      if (m.kind === 'payment') paymentsSum += m.amount;
+    });
+    return { creditsSum, paymentsSum };
+  }, [storeMovements]);
+
+  // Lista de meses disponibles para selección
+  const availableMonths = useMemo(() => {
+    return generateAvailableMonths(data?.customer?.created_at);
+  }, [data?.customer?.created_at]);
+
+  // Movimientos filtrados por tipo (todo / compras / abonos)
+  const typeFilteredMovements = useMemo(() => {
+    if (filterType === 'all') return storeMovements;
+    return storeMovements.filter(m => m.kind === filterType);
+  }, [storeMovements, filterType]);
+
+  // Movimientos finales filtrados por el buscador
+  const filteredStoreMovements = useMemo(() => {
+    const term = normalizeSearchText(searchConcept.trim());
+    if (!term) return typeFilteredMovements;
+    return typeFilteredMovements.filter(m => {
+      const titleMatch = normalizeSearchText(m.title).includes(term);
+      const notesMatch = m.notes
+        ? normalizeSearchText(m.notes).includes(term)
+        : false;
+      return titleMatch || notesMatch;
+    });
+  }, [typeFilteredMovements, searchConcept]);
+
+  const handleLogout = () => {
+    confirmLogout({ message: CUSTOMER_LOGOUT_MESSAGE });
+  };
+
+  const handleCallStore = (phone?: string | null) => {
+    if (!phone) return;
+    const cleanPhone = phone.replace(/[^0-9+]/g, '');
+    window.open(`tel:${cleanPhone}`, '_self');
+  };
+
+  if (isLoading) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 20,
+          backgroundColor: Colors.background,
+          gap: 12,
+        }}>
+        <div className="spinner" style={{ width: 36, height: 36, border: `3px solid ${Colors.border}`, borderTopColor: Colors.primary, borderRadius: '50%' }} />
+        <span style={{ fontSize: 15, fontWeight: 600, color: Colors.textSecondary }}>
+          Cargando tus cuentas y tiendas...
+        </span>
+      </div>
+    );
+  }
+
+  if (isError && !data) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 20,
+          backgroundColor: Colors.background,
+          gap: 12,
+          textAlign: 'center',
+        }}>
+        <IoAlertCircleOutline size={48} color={Colors.destructive} />
+        <span style={{ fontSize: 16, fontWeight: 800, color: Colors.text, marginTop: 8 }}>
+          No se pudieron cargar tus cuentas
+        </span>
+        <span style={{ fontSize: 13, color: Colors.textSecondary, maxWidth: 300 }}>
+          Revisa tu conexión a internet e intenta nuevamente.
+        </span>
+        <button
+          onClick={() => refetch()}
+          style={{
+            marginTop: 16,
+            backgroundColor: Colors.primary,
+            color: '#FFFFFF',
+            fontWeight: 800,
+            fontSize: 14,
+            padding: '10px 24px',
+            borderRadius: Radius.md,
+            border: 'none',
+            cursor: 'pointer',
+          }}>
+          Reintentar
+        </button>
+        <button
+          onClick={handleLogout}
+          style={{
+            marginTop: 10,
+            background: 'none',
+            border: 'none',
+            color: Colors.textSecondary,
+            fontWeight: 600,
+            fontSize: 13,
+            cursor: 'pointer',
+          }}>
+          Cerrar sesión
+        </button>
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // VISTA 2: DETALLE DE MOVIMIENTOS DE LA TIENDA SELECCIONADA ("Libreta")
+  // =========================================================================
+  if (selectedStore) {
+    const rawStores: any = selectedStore.stores;
+    const storeInfo: any = Array.isArray(rawStores) ? rawStores[0] : rawStores;
+    const storeName = storeInfo?.store_name ?? 'Tienda de barrio';
+    const currentBalance = Number(selectedStore.current_balance || 0);
+    const isPaid = currentBalance === 0;
+
+    const creditCount = storeMovements.filter(m => m.kind === 'credit').length;
+    const paymentCount = storeMovements.filter(m => m.kind === 'payment').length;
+
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          backgroundColor: Colors.background,
+          position: 'relative',
+          paddingBottom: 40,
+        }}>
+        <DynamicBrandCurves position="bottom-left" />
+
+        {/* Barra superior amigable para volver */}
+        <div
+          style={{
+            backgroundColor: Colors.card,
+            padding: '16px 16px 12px',
+            borderBottom: `1px solid ${Colors.border}`,
+            position: 'relative',
+            zIndex: 1,
+          }}>
+          <button
+            onClick={() => handleSelectStore(null)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              backgroundColor: '#FFF7ED',
+              padding: '8px 14px',
+              borderRadius: 24,
+              border: '1px solid #FFEDD5',
+              cursor: 'pointer',
+            }}>
+            <IoArrowBack size={18} color={Colors.primary} />
+            <span style={{ fontSize: 14, fontWeight: 800, color: Colors.primary }}>
+              Volver a mis tiendas
+            </span>
+          </button>
+        </div>
+
+        <div style={{ position: 'relative', zIndex: 1, padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Tarjeta de la tienda */}
+          <Card style={{ padding: 18, borderRadius: Radius.xl, display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+              <div
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: 18,
+                  backgroundColor: Colors.primaryLight,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}>
+                <IoStorefront size={26} color={Colors.primary} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 20, fontWeight: 800, color: Colors.text }}>
+                  {storeName}
+                </div>
+                {storeInfo?.address && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                    <IoLocationOutline size={14} color={Colors.textSecondary} />
+                    <span style={{ fontSize: 13, color: Colors.textSecondary, fontWeight: 500 }}>
+                      {storeInfo.address}
+                    </span>
+                  </div>
+                )}
+                {storeInfo?.phone && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                    <IoCallOutline size={14} color={Colors.textSecondary} />
+                    <span style={{ fontSize: 13, color: Colors.textSecondary, fontWeight: 500 }}>
+                      {storeInfo.phone}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {storeInfo?.phone && (
+              <button
+                onClick={() => handleCallStore(storeInfo.phone)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  backgroundColor: '#16A34A',
+                  padding: '10px 16px',
+                  borderRadius: Radius.md,
+                  border: 'none',
+                  color: '#FFFFFF',
+                  fontSize: 14,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  width: '100%',
+                }}>
+                <IoCall size={16} />
+                <span>Llamar a la tienda</span>
+              </button>
+            )}
+
+            {/* Saldo en grande y claro */}
+            <div
+              style={{
+                backgroundColor: isPaid ? '#F0FDF4' : '#FEF2F2',
+                border: `1.5px solid ${isPaid ? '#BBF7D0' : '#FECACA'}`,
+                borderRadius: Radius.lg,
+                padding: 16,
+                textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+              }}>
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 800,
+                  color: isPaid ? '#15803D' : Colors.destructive,
+                  letterSpacing: '0.8px',
+                }}>
+                {isPaid ? '¡ESTÁS AL DÍA EN ESTA TIENDA!' : 'EN ESTA TIENDA DEBES:'}
+              </span>
+              <span
+                style={{
+                  fontSize: 32,
+                  fontWeight: 900,
+                  color: isPaid ? '#15803D' : Colors.destructive,
+                  margin: '4px 0',
+                }}>
+                {formatCOP(currentBalance)}
+              </span>
+              <span style={{ fontSize: 12, color: Colors.textSecondary, fontWeight: 500 }}>
+                {isPaid
+                  ? 'No tienes ninguna deuda pendiente con este tendero.'
+                  : 'Este es el dinero que te falta por pagar.'}
+              </span>
+            </div>
+          </Card>
+
+          {/* Sección de la libreta de cuentas */}
+          <div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: Colors.text }}>
+              Libreta de tus cuentas
+            </div>
+            <div style={{ fontSize: 13, color: Colors.textSecondary, fontWeight: 500, marginTop: 2 }}>
+              Aquí ves exactamente cada compra y cada abono registrado:
+            </div>
+          </div>
+
+          {/* Filtros estilo imán */}
+          <MagnetFilterBar
+            options={[
+              { key: 'all', label: `Todos (${storeMovements.length})` },
+              { key: 'credit', label: `Solo compras (${creditCount})` },
+              { key: 'payment', label: `Solo abonos (${paymentCount})` },
+            ]}
+            selectedKey={filterType}
+            onSelect={key => setFilterType(key as 'all' | 'credit' | 'payment')}
+          />
+
+          {/* Tabla / Libreta de apuntes */}
+          <div
+            style={{
+              backgroundColor: Colors.card,
+              borderRadius: Radius.lg,
+              border: `1.5px solid ${Colors.border}`,
+              overflow: 'hidden',
+            }}>
+            {/* Encabezado de la tabla con filtro Mes y Buscador "Qué fue" */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                backgroundColor: '#FFF7ED',
+                borderBottom: `1.5px solid ${Colors.border}`,
+                padding: '8px 12px',
+                minHeight: 46,
+                boxSizing: 'border-box',
+              }}>
+              {/* Filtro Mes */}
+              <div style={{ width: 86, flexShrink: 0 }}>
+                <button
+                  onClick={handleOpenMonthPicker}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 3,
+                    backgroundColor: '#FED7AA',
+                    padding: '4px 6px',
+                    borderRadius: Radius.sm,
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}>
+                  <span
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 800,
+                      color: '#9A3412',
+                      letterSpacing: '0.5px',
+                    }}>
+                    {formatMonthHeader(selectedMonth)}
+                  </span>
+                  <IoCaretDown size={10} color="#9A3412" />
+                </button>
+              </div>
+
+              {/* Filtro QUÉ FUE con buscador animado */}
+              <div style={{ flex: 1, padding: '0 6px', position: 'relative' }}>
+                {!isSearchOpen ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 800,
+                        color: Colors.textSecondary,
+                        letterSpacing: '0.6px',
+                      }}>
+                      QUÉ FUE
+                    </span>
+                    <button
+                      onClick={() => setIsSearchOpen(true)}
+                      style={{
+                        padding: 4,
+                        borderRadius: Radius.sm,
+                        backgroundColor: searchConcept.trim() ? Colors.primary : '#FED7AA',
+                        border: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                      }}>
+                      <IoSearch
+                        size={12}
+                        color={searchConcept.trim() ? '#FFFFFF' : '#9A3412'}
+                      />
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      backgroundColor: '#FFFFFF',
+                      border: `1.5px solid ${Colors.primary}`,
+                      borderRadius: Radius.sm,
+                      padding: '2px 6px',
+                      gap: 4,
+                      width: '100%',
+                      boxSizing: 'border-box',
+                    }}>
+                    <IoSearch size={12} color={Colors.primary} />
+                    <input
+                      type="text"
+                      placeholder="Buscar..."
+                      value={searchConcept}
+                      onChange={e => setSearchConcept(e.target.value)}
+                      autoFocus
+                      style={{
+                        flex: 1,
+                        border: 'none',
+                        outline: 'none',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: Colors.text,
+                        padding: 0,
+                        minWidth: 0,
+                      }}
+                    />
+                    <button
+                      onClick={() => {
+                        setIsSearchOpen(false);
+                        setSearchConcept('');
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                        display: 'flex',
+                        cursor: 'pointer',
+                      }}>
+                      <IoCloseCircle size={15} color={Colors.textSecondary} />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Columna Valor */}
+              <div style={{ width: 80, textAlign: 'right', flexShrink: 0 }}>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 800,
+                    color: Colors.textSecondary,
+                    letterSpacing: '0.6px',
+                  }}>
+                  VALOR
+                </span>
+              </div>
+            </div>
+
+            {/* Filas de la tabla */}
+            {isError ? (
+              <div style={{ padding: 28, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                <IoAlertCircleOutline size={36} color={Colors.destructive} />
+                <div style={{ fontSize: 15, fontWeight: 800, color: Colors.text }}>
+                  Sin conexión a internet
+                </div>
+                <div style={{ fontSize: 12, color: Colors.textSecondary }}>
+                  No se pudieron cargar los datos de {formatMonthLabel(selectedMonth)}.
+                </div>
+                <button
+                  onClick={() => refetch()}
+                  style={{
+                    marginTop: 10,
+                    padding: '6px 14px',
+                    borderRadius: Radius.md,
+                    backgroundColor: '#FFEDD5',
+                    border: '1px solid #FDBA74',
+                    color: '#9A3412',
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}>
+                  Reintentar
+                </button>
+              </div>
+            ) : isFetching && !isLoading ? (
+              <div style={{ padding: 32, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: Colors.textSecondary }}>
+                  Consultando movimientos de {formatMonthLabel(selectedMonth)}...
+                </span>
+              </div>
+            ) : filteredStoreMovements.length === 0 ? (
+              <div style={{ padding: 28, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                <IoReceiptOutline size={32} color={Colors.textMuted} />
+                <div style={{ fontSize: 15, fontWeight: 800, color: Colors.text }}>
+                  {searchConcept.trim() ? 'Sin coincidencias' : 'Sin registros en este mes'}
+                </div>
+                <div style={{ fontSize: 12, color: Colors.textSecondary, maxWidth: 280 }}>
+                  {searchConcept.trim()
+                    ? `No hay compras ni abonos que contengan "${searchConcept}".`
+                    : `No hay compras ni abonos registrados para ${formatMonthLabel(selectedMonth)}.`}
+                </div>
+                {searchConcept.trim() ? (
+                  <button
+                    onClick={() => setSearchConcept('')}
+                    style={{
+                      marginTop: 10,
+                      padding: '6px 14px',
+                      borderRadius: Radius.md,
+                      backgroundColor: '#FFEDD5',
+                      border: '1px solid #FDBA74',
+                      color: '#9A3412',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}>
+                    Limpiar búsqueda
+                  </button>
+                ) : selectedMonth !== 'all' && storeMovements.length > 0 ? (
+                  <button
+                    onClick={() => handleSelectMonth('all')}
+                    style={{
+                      marginTop: 10,
+                      padding: '6px 14px',
+                      borderRadius: Radius.md,
+                      backgroundColor: '#FFEDD5',
+                      border: '1px solid #FDBA74',
+                      color: '#9A3412',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}>
+                    Ver historial completo ({storeMovements.length})
+                  </button>
+                ) : null}
+              </div>
+            ) : (
+              filteredStoreMovements.map((item, index) => {
+                const isCredit = item.kind === 'credit';
+                return (
+                  <div
+                    key={item.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '12px',
+                      backgroundColor: index % 2 === 1 ? Colors.cardAlt : Colors.card,
+                      borderBottom: index === filteredStoreMovements.length - 1 ? 'none' : `1px solid ${Colors.border}`,
+                    }}>
+                    {/* Fecha */}
+                    <div style={{ width: 86, flexShrink: 0 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: Colors.textSecondary }}>
+                        {formatDateDisplay(item.date)}
+                      </span>
+                    </div>
+
+                    {/* Detalle */}
+                    <div style={{ flex: 1, padding: '0 6px' }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: Colors.text }}>
+                        {item.title}
+                      </div>
+
+                      <div style={{ marginTop: 3 }}>
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            padding: '2px 6px',
+                            borderRadius: 4,
+                            fontSize: 10,
+                            fontWeight: 800,
+                            backgroundColor: isCredit ? '#FEE2E2' : '#DCFCE7',
+                            color: isCredit ? Colors.destructive : '#15803D',
+                          }}>
+                          {isCredit ? 'Compra fiada (+)' : 'Abono realizado (-)'}
+                        </span>
+                      </div>
+
+                      {item.dueDate && (
+                        <div style={{ fontSize: 10, color: Colors.destructive, fontWeight: 600, marginTop: 2 }}>
+                          Pagar antes de: {formatDateDisplay(item.dueDate)}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Monto */}
+                    <div style={{ width: 80, textAlign: 'right', flexShrink: 0 }}>
+                      <span
+                        style={{
+                          fontSize: 14,
+                          fontWeight: 800,
+                          color: isCredit ? Colors.destructive : '#15803D',
+                        }}>
+                        {isCredit ? '+' : '−'}
+                        {formatCOP(item.amount)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+
+            {/* Resumen inferior de la libreta */}
+            {storeMovements.length > 0 && (
+              <div
+                style={{
+                  backgroundColor: Colors.cardAlt,
+                  borderTop: `1.5px solid ${Colors.border}`,
+                  padding: 14,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 6,
+                }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: Colors.textSecondary }}>
+                    {selectedMonth === 'all'
+                      ? 'Total fiado acumulado:'
+                      : `Total fiado en ${formatMonthLabel(selectedMonth)}:`}
+                  </span>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: Colors.destructive }}>
+                    +{formatCOP(storeTotals.creditsSum)}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: Colors.textSecondary }}>
+                    {selectedMonth === 'all'
+                      ? 'Total que has abonado:'
+                      : `Total abonado en ${formatMonthLabel(selectedMonth)}:`}
+                  </span>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: '#15803D' }}>
+                    −{formatCOP(storeTotals.paymentsSum)}
+                  </span>
+                </div>
+                <div style={{ height: 1, backgroundColor: Colors.border, margin: '4px 0' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: Colors.text }}>
+                    Saldo pendiente actual:
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 16,
+                      fontWeight: 900,
+                      color: isPaid ? '#15803D' : Colors.destructive,
+                    }}>
+                    {formatCOP(currentBalance)}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Botón inferior para volver */}
+          <Button
+            title="Volver a ver todas mis tiendas"
+            variant="secondary"
+            onPress={() => handleSelectStore(null)}
+          />
+        </div>
+
+        {/* Modal para seleccionar el mes */}
+        {isMonthModalVisible && (
+          <div
+            onClick={() => setIsMonthModalVisible(false)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.55)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 20,
+              zIndex: 1000,
+            }}>
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{
+                backgroundColor: Colors.card,
+                borderRadius: Radius.lg,
+                width: '100%',
+                maxWidth: 420,
+                maxHeight: '80vh',
+                border: `1.5px solid ${Colors.border}`,
+                padding: 18,
+                boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+                display: 'flex',
+                flexDirection: 'column',
+                boxSizing: 'border-box',
+              }}>
+              {/* Cabecera del modal */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: 12,
+                  paddingBottom: 12,
+                  borderBottom: `1px solid ${Colors.border}`,
+                }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
+                  <div
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 18,
+                      backgroundColor: '#FFEDD5',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                    <IoCalendar size={20} color={Colors.primary} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: Colors.text }}>
+                      Seleccionar el mes...
+                    </div>
+                    <div style={{ fontSize: 12, color: Colors.textSecondary, fontWeight: 500, marginTop: 1 }}>
+                      Filtra tus cuentas y abonos por mes
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsMonthModalVisible(false)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: 4,
+                    cursor: 'pointer',
+                    display: 'flex',
+                  }}>
+                  <IoClose size={22} color={Colors.textSecondary} />
+                </button>
+              </div>
+
+              {/* Lista de meses disponibles */}
+              <div style={{ overflowY: 'auto', maxHeight: 320, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {availableMonths.map(monthKey => {
+                  const isSelected = selectedMonth === monthKey;
+                  const isCurrent = monthKey === getCurrentMonthKey();
+
+                  return (
+                    <div
+                      key={monthKey}
+                      onClick={() => handleSelectMonth(monthKey)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '11px 12px',
+                        borderRadius: Radius.md,
+                        border: `1.5px solid ${isSelected ? Colors.primary : Colors.border}`,
+                        backgroundColor: isSelected ? '#FFF7ED' : Colors.cardAlt,
+                        cursor: 'pointer',
+                      }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
+                        <div
+                          style={{
+                            width: 34,
+                            height: 34,
+                            borderRadius: 17,
+                            backgroundColor: isSelected ? '#FFEDD5' : '#F1F5F9',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}>
+                          <IoCalendarOutline
+                            size={18}
+                            color={isSelected ? Colors.primary : Colors.textSecondary}
+                          />
+                        </div>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span
+                              style={{
+                                fontSize: 14,
+                                fontWeight: isSelected ? 800 : 700,
+                                color: isSelected ? '#9A3412' : Colors.text,
+                              }}>
+                              {formatMonthLabel(monthKey)}
+                            </span>
+                            {isCurrent && (
+                              <span
+                                style={{
+                                  backgroundColor: '#E0F2FE',
+                                  color: '#0369A1',
+                                  fontSize: 10,
+                                  fontWeight: 800,
+                                  padding: '2px 6px',
+                                  borderRadius: 4,
+                                }}>
+                                Mes actual
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: 12, color: Colors.textSecondary, fontWeight: 500, marginTop: 2 }}>
+                            {isSelected ? 'Mes seleccionado' : 'Consultar este mes'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {isSelected ? (
+                        <IoCheckmarkCircle size={22} color={Colors.primary} />
+                      ) : (
+                        <IoEllipseOutline size={22} color={Colors.border} />
+                      )}
+                    </div>
+                  );
+                })}
+
+                {/* Opción para ver todos los meses */}
+                <div
+                  onClick={() => handleSelectMonth('all')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '11px 12px',
+                    borderRadius: Radius.md,
+                    border: `1.5px dashed ${selectedMonth === 'all' ? Colors.primary : Colors.border}`,
+                    backgroundColor: selectedMonth === 'all' ? '#FFF7ED' : Colors.cardAlt,
+                    cursor: 'pointer',
+                  }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
+                    <div
+                      style={{
+                        width: 34,
+                        height: 34,
+                        borderRadius: 17,
+                        backgroundColor: selectedMonth === 'all' ? '#FFEDD5' : '#F1F5F9',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}>
+                      <IoLayersOutline
+                        size={18}
+                        color={selectedMonth === 'all' ? Colors.primary : Colors.textSecondary}
+                      />
+                    </div>
+                    <div>
+                      <div
+                        style={{
+                          fontSize: 14,
+                          fontWeight: selectedMonth === 'all' ? 800 : 700,
+                          color: selectedMonth === 'all' ? '#9A3412' : Colors.text,
+                        }}>
+                        Todos los meses
+                      </div>
+                      <div style={{ fontSize: 12, color: Colors.textSecondary, fontWeight: 500, marginTop: 2 }}>
+                        Consultar historial completo sin filtro de fecha
+                      </div>
+                    </div>
+                  </div>
+
+                  {selectedMonth === 'all' ? (
+                    <IoCheckmarkCircle size={22} color={Colors.primary} />
+                  ) : (
+                    <IoEllipseOutline size={22} color={Colors.border} />
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // VISTA 1: LISTADO DE TIENDAS VINCULADAS ("Mis Tiendas")
+  // =========================================================================
+  const allClear = totalBalance === 0 && stores.length > 0;
+
+  return (
+    <div
+      style={{
+        minHeight: '100vh',
+        backgroundColor: Colors.background,
+        position: 'relative',
+        paddingBottom: 40,
+      }}>
+      <DynamicBrandCurves position="top-right" />
+
+      {/* Cabecera amigable con saludo y botón de salir */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '24px 20px 12px',
+          backgroundColor: Colors.card,
+          borderBottom: `1px solid ${Colors.border}`,
+          position: 'relative',
+          zIndex: 1,
+        }}>
+        <div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: Colors.text }}>
+            ¡Hola, {customerName}!
+          </div>
+          <div style={{ fontSize: 13, color: Colors.textSecondary, fontWeight: 500, marginTop: 2 }}>
+            Tus cuentas en tiendas de barrio
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button
+            onClick={handleOpenNotificationModal}
+            title={notifGranted ? 'Configuración de notificaciones' : 'Activar notificaciones'}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              backgroundColor: notifGranted ? '#ECFDF5' : '#FFF7ED',
+              border: `1.5px solid ${notifGranted ? '#A7F3D0' : '#FED7AA'}`,
+              color: notifGranted ? '#059669' : Colors.primary,
+              cursor: 'pointer',
+            }}>
+            {notifGranted ? <IoNotifications size={18} /> : <IoNotificationsOutline size={18} />}
+          </button>
+          <button
+            onClick={handleLogout}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              backgroundColor: '#FEE2E2',
+              padding: '6px 12px',
+              borderRadius: 20,
+              border: 'none',
+              cursor: 'pointer',
+            }}>
+            <IoLogOutOutline size={20} color={Colors.destructive} />
+            <span style={{ fontSize: 13, fontWeight: 700, color: Colors.destructive }}>
+              Salir
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <div style={{ position: 'relative', zIndex: 1, padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {/* Banner de activación de notificaciones */}
+        {!notifGranted && (
+          <div
+            style={{
+              backgroundColor: '#FFF7ED',
+              border: '1.5px solid #FDBA74',
+              borderRadius: Radius.lg,
+              padding: '12px 14px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+              boxShadow: '0 2px 8px rgba(255, 107, 0, 0.08)',
+            }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 12,
+                  backgroundColor: '#FFEDD5',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: Colors.primary,
+                  flexShrink: 0,
+                }}>
+                <IoNotifications size={22} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: Colors.text }}>
+                  Activar avisos de fiados y abonos
+                </div>
+                <div style={{ fontSize: 11, color: Colors.textSecondary, marginTop: 1, lineHeight: '15px' }}>
+                  Toca abajo para recibir avisos instantáneos en tu celular cuando registren un movimiento en tu cuenta.
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={handleOpenNotificationModal}
+              style={{
+                backgroundColor: Colors.primary,
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: 10,
+                padding: '9px 12px',
+                fontSize: 12,
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                boxShadow: '0 2px 6px rgba(255, 107, 0, 0.25)',
+              }}>
+              <IoNotificationsOutline size={16} />
+              Activar Notificaciones
+            </button>
+          </div>
+        )}
+
+        {/* Tarjeta del total */}
+        <Card
+          style={{
+            backgroundColor: allClear ? '#F0FDF4' : '#FFF7ED',
+            border: `1.5px solid ${allClear ? '#BBF7D0' : '#FED7AA'}`,
+            borderRadius: Radius.xl,
+            padding: 20,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 6,
+          }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {allClear ? (
+              <IoCheckmarkCircle size={26} color="#15803D" />
+            ) : (
+              <IoWallet size={26} color={Colors.destructive} />
+            )}
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 800,
+                color: allClear ? '#15803D' : Colors.destructive,
+                letterSpacing: '0.8px',
+              }}>
+              {allClear
+                ? '¡ESTÁS AL DÍA EN TUS PAGOS!'
+                : 'TOTAL QUE DEBES EN TODAS TUS TIENDAS:'}
+            </span>
+          </div>
+
+          <div
+            style={{
+              fontSize: 34,
+              fontWeight: 900,
+              color: allClear ? '#15803D' : Colors.destructive,
+              letterSpacing: '-0.5px',
+            }}>
+            {formatCOP(totalBalance)}
+          </div>
+
+          <div style={{ fontSize: 13, color: Colors.textSecondary, lineHeight: '18px', fontWeight: 500, marginTop: 2 }}>
+            {allClear
+              ? 'No tienes ninguna deuda pendiente. ¡Felicitaciones!'
+              : `Tienes cuenta en ${stores.length} tienda${
+                  stores.length !== 1 ? 's' : ''
+                }. Toca cualquiera de tus tiendas abajo para ver tu libreta detallada.`}
+          </div>
+        </Card>
+
+        {/* Título de la sección de tiendas */}
+        <div style={{ marginTop: 4 }}>
+          <div style={{ fontSize: 18, fontWeight: 800, color: Colors.text }}>
+            Tus tiendas ({stores.length})
+          </div>
+          <div style={{ fontSize: 13, color: Colors.textSecondary, fontWeight: 500, marginTop: 2 }}>
+            Toca la tienda que deseas revisar para ver sus compras y pagos:
+          </div>
+        </div>
+
+        {/* Listado de tiendas */}
+        {stores.length === 0 ? (
+          <Card
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 32,
+              gap: 10,
+              textAlign: 'center',
+            }}>
+            <IoStorefrontOutline size={42} color={Colors.textMuted} />
+            <div style={{ fontSize: 16, fontWeight: 800, color: Colors.text }}>
+              No tienes tiendas vinculadas
+            </div>
+            <div style={{ fontSize: 13, color: Colors.textSecondary, lineHeight: '18px' }}>
+              Pídele al tendero de tu barrio que te registre con tu número de
+              documento para que puedas ver tus cuentas aquí.
+            </div>
+          </Card>
+        ) : (
+          stores.map((item: any) => {
+            const rawStore: any = item.stores;
+            const store: any = Array.isArray(rawStore) ? rawStore[0] : rawStore;
+            const storeName = store?.store_name ?? 'Tienda de barrio';
+            const balance = Number(item.current_balance || 0);
+            const paid = balance === 0;
+
+            return (
+              <div
+                key={item.store_id}
+                onClick={() => handleSelectStore(item.store_id)}
+                style={{ cursor: 'pointer' }}>
+                <Card
+                  style={{
+                    padding: 16,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 12,
+                    border: `1.5px solid ${Colors.border}`,
+                    boxShadow: '0 2px 6px rgba(28, 16, 8, 0.06)',
+                  }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    {/* Icono de la tienda */}
+                    <div
+                      style={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 16,
+                        backgroundColor: paid ? '#DCFCE7' : Colors.primaryLight,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}>
+                      <IoStorefront
+                        size={24}
+                        color={paid ? '#15803D' : Colors.primary}
+                      />
+                    </div>
+
+                    {/* Información de la tienda */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: Colors.text }}>
+                        {storeName}
+                      </div>
+                      {store?.address && (
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: Colors.textSecondary,
+                            marginTop: 2,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}>
+                          {store.address}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Saldo de la tienda */}
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: paid ? '#15803D' : Colors.destructive,
+                        }}>
+                        {paid ? 'Al día' : 'Debes'}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 16,
+                          fontWeight: 800,
+                          color: paid ? '#15803D' : Colors.destructive,
+                        }}>
+                        {formatCOP(balance)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Botón visual para tocar y ver libreta */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      backgroundColor: '#FFF7ED',
+                      padding: '8px 12px',
+                      borderRadius: Radius.md,
+                      border: '1px solid #FFEDD5',
+                    }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: Colors.primary }}>
+                      Toca aquí para ver tus compras y abonos
+                    </span>
+                    <IoChevronForward size={16} color={Colors.primary} />
+                  </div>
+                </Card>
+              </div>
+            );
+          })
+        )}
+
+        {/* Banner para instalar PWA si no está en modo standalone */}
+        {typeof window !== 'undefined' &&
+          !window.matchMedia('(display-mode: standalone)').matches &&
+          !(window.navigator as any).standalone && (
+            <Card
+              style={{
+                padding: 14,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                backgroundColor: '#FFF7ED',
+                border: '1.5px solid #FED7AA',
+                borderRadius: 18,
+                marginTop: 6,
+              }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: 19,
+                    backgroundColor: '#FFEDD5',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: Colors.primary,
+                  }}>
+                  <IoDownloadOutline size={20} />
+                </div>
+                <div>
+                  <div style={{ fontSize: 13.5, fontWeight: 800, color: Colors.text }}>
+                    Instalar en tu teléfono
+                  </div>
+                  <div style={{ fontSize: 11.5, color: Colors.textSecondary }}>
+                    Acceso directo y consultas sin conexión
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('pwa-show-install-modal'));
+                }}
+                style={{
+                  backgroundColor: Colors.primary,
+                  color: '#FFFFFF',
+                  fontWeight: 700,
+                  fontSize: 12,
+                  padding: '7px 12px',
+                  borderRadius: 10,
+                  border: 'none',
+                  cursor: 'pointer',
+                }}>
+                Instalar
+              </button>
+            </Card>
+          )}
+
+        {/* Botón inferior de cerrar sesión */}
+        <div style={{ marginTop: 8, display: 'flex', justifyContent: 'center' }}>
+          <Button
+            title="Cerrar sesión"
+            variant="ghost"
+            onPress={handleLogout}
+            style={{ padding: '8px 20px' }}
+          />
+        </div>
+
+        {/* Modal de configuración de notificaciones */}
+        <NotificationSettingsModal
+          isOpen={isNotifModalOpen}
+          onClose={() => setIsNotifModalOpen(false)}
+          onActivated={() => setNotifGranted(true)}
+        />
+      </div>
+    </div>
+  );
+}

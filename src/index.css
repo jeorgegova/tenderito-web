@@ -1,0 +1,124 @@
+:root {
+  --primary: #FF6B00;
+  --primary-dark: #E85D00;
+  --primary-light: #FFF1E5;
+  --primary-mid: #FFD7B8;
+  --background: #F7F9FC;
+  --card: #FFFFFF;
+  --card-alt: #F1F5F9;
+  --text: #142033;
+  --text-secondary: #52647D;
+  --text-muted: #8E9BAE;
+  --destructive: #E53935;
+  --destructive-alt: #FFF0EF;
+  --success: #16834A;
+  --success-alt: #E3F8EC;
+  --warning: #D97706;
+  --warning-alt: #FEF3C7;
+  --border: #E8EDF3;
+  --border-strong: #CBD5E1;
+  --tab-bar: #FFFFFF;
+  --tab-inactive: #52647D;
+
+  font-family: 'Plus+Jakarta+Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: var(--text);
+  background-color: var(--background);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  background-color: var(--background);
+  overflow-x: hidden;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Contenedor responsivo centrado para tablets y escritorio para conservar la experiencia de app móvil */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  position: relative;
+  background-color: var(--background);
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.05);
+}
+
+/* ── Control de capas: el fondo y las curvas decorativas SIEMPRE van por detrás de todos los componentes ── */
+.brand-curves-bg {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  pointer-events: none !important;
+  z-index: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Crea un contexto de apilamiento aislado y asegura que todo el contenido quede en z-index: 1 */
+.app-container > * {
+  position: relative;
+  isolation: isolate;
+}
+
+.app-container > * > *:not(.brand-curves-bg) {
+  position: relative;
+  z-index: 1;
+}
+
+@media (min-width: 768px) {
+  body {
+    background-color: #EBF0F7;
+  }
+  .app-container {
+    min-height: 100vh;
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+  }
+}
+
+input, button, select, textarea {
+  font-family: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+/* Ocultar barra de desplazamiento por defecto para mantener estética nativa */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
