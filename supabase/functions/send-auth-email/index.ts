@@ -20,20 +20,16 @@ const BRAND_DARK = "#142033";
 const BRAND_BG = "#FFF1E5";
 const BRAND_NAME = "Tenderito";
 
-// 🎨 Plantilla HTML institucional para correos de Tenderito
+// 🎨 Plantilla HTML institucional para correos de Tenderito (Solo código OTP de 6 dígitos)
 function getTemplate({
   title,
   message,
   token,
-  buttonText,
-  url,
   logoUrl,
 }: {
   title: string;
   message: string;
   token?: string;
-  buttonText: string;
-  url: string;
   logoUrl: string;
 }) {
   return `
@@ -45,91 +41,53 @@ function getTemplate({
 <title>${title}</title>
 </head>
 <body style="margin:0;padding:0;background:#F6F8FA;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="padding:36px 16px;background:#F6F8FA;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 16px;background:#F6F8FA;">
     <tr>
       <td align="center">
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#FFFFFF;border-radius:24px;overflow:hidden;box-shadow:0 12px 36px rgba(20,32,51,0.08);border:1px solid #EAEFEA;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#FFFFFF;border-radius:24px;overflow:hidden;box-shadow:0 12px 36px rgba(20,32,51,0.08);border:1px solid #EAEFEA;">
           
           <!-- CABECERA Y LOGO -->
           <tr>
-            <td style="padding:36px 24px 12px 24px;text-align:center;">
-              <img src="${logoUrl}" alt="${BRAND_NAME}" style="max-width:160px;height:auto;display:inline-block;margin-bottom:12px;" />
-              <div style="width:48px;height:5px;background:${BRAND_ORANGE};border-radius:999px;margin:8px auto 0 auto;"></div>
+            <td style="padding:40px 24px 16px 24px;text-align:center;">
+              <img src="${logoUrl}" alt="${BRAND_NAME}" style="max-width:160px;height:auto;display:inline-block;" />
+              <div style="width:44px;height:4px;background:${BRAND_ORANGE};border-radius:999px;margin:16px auto 0 auto;"></div>
             </td>
           </tr>
 
           <!-- CONTENIDO PRINCIPAL -->
           <tr>
-            <td style="padding:16px 36px 28px 36px;text-align:center;">
-              <h1 style="margin:0 0 10px 0;font-size:22px;font-weight:800;color:${BRAND_DARK};letter-spacing:-0.4px;">
+            <td style="padding:16px 36px 36px 36px;text-align:center;">
+              <h1 style="margin:0 0 12px 0;font-size:22px;font-weight:800;color:${BRAND_DARK};letter-spacing:-0.4px;">
                 ${title}
               </h1>
-              <p style="margin:0 0 24px 0;font-size:14.5px;color:#596375;line-height:1.6;">
+              <p style="margin:0 0 28px 0;font-size:14.5px;color:#596375;line-height:1.6;">
                 ${message}
               </p>
 
-              ${
-                token
-                  ? `
-              <!-- CAJA DEL CÓDIGO DE 6 DÍGITOS PARA MÓVIL Y WEB -->
-              <div style="background:${BRAND_BG};border:2px dashed ${BRAND_ORANGE};border-radius:18px;padding:20px 16px;text-align:center;margin:0 auto 28px auto;max-width:340px;">
-                <p style="font-size:12px;color:#945727;margin:0 0 6px 0;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">
-                  Tu código de verificación
+              <!-- CAJA EXCLUSIVA DEL CÓDIGO DE 6 DÍGITOS -->
+              <div style="background:${BRAND_BG};border:2px dashed ${BRAND_ORANGE};border-radius:20px;padding:24px 16px;text-align:center;margin:0 auto 24px auto;">
+                <p style="font-size:12px;color:#945727;margin:0 0 8px 0;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;">
+                  Tu código de 6 dígitos
                 </p>
-                <div style="font-size:34px;font-weight:800;letter-spacing:8px;color:${BRAND_ORANGE};font-family:'Courier New',Courier,monospace;line-height:1.2;">
-                  ${token}
+                <div style="font-size:38px;font-weight:800;letter-spacing:10px;color:${BRAND_ORANGE};font-family:'Courier New',Courier,monospace;line-height:1.1;padding-left:10px;">
+                  ${token || "------"}
                 </div>
-                <p style="font-size:11.5px;color:#7A6B60;margin:6px 0 0 0;">
-                  Ingresa este código en la app de Tenderito
+                <p style="font-size:12px;color:#7A6B60;margin:10px 0 0 0;font-weight:500;">
+                  Escríbelo en la pantalla de Tenderito
                 </p>
               </div>
-              `
-                  : ""
-              }
 
-              <!-- BOTÓN DE ACCIÓN DIRECTA -->
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center">
-                    <a href="${url}"
-                       target="_blank"
-                       style="display:inline-block;background:${BRAND_ORANGE};color:#FFFFFF;
-                              padding:14px 38px;border-radius:999px;
-                              text-decoration:none;font-size:14px;font-weight:800;
-                              letter-spacing:0.04em;text-transform:uppercase;
-                              box-shadow:0 6px 18px rgba(255,107,0,0.35);">
-                      ${buttonText}
-                    </a>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- DIVISOR -->
-          <tr>
-            <td style="padding:0 36px;">
-              <div style="height:1px;background:#EAEFEA;"></div>
-            </td>
-          </tr>
-
-          <!-- ENLACE DIRECTO DE RESPALDO -->
-          <tr>
-            <td style="padding:20px 36px;text-align:center;">
-              <p style="font-size:12px;color:#8B95A5;margin:0 0 6px 0;">
-                O si prefieres, copia este enlace en tu navegador:
-              </p>
-              <p style="font-size:11.5px;color:${BRAND_ORANGE};word-break:break-all;margin:0;line-height:1.4;">
-                ${url}
+              <p style="font-size:12.5px;color:#8B95A5;line-height:1.5;margin:0;">
+                Este código vence en pocos minutos y solo puede usarse una vez.
               </p>
             </td>
           </tr>
 
           <!-- PIE DE PÁGINA -->
           <tr>
-            <td style="padding:20px 24px;text-align:center;background:#FAFBFB;border-top:1px solid #EAEFEA;font-size:11px;color:#8B95A5;line-height:1.5;">
+            <td style="padding:20px 24px;text-align:center;background:#FAFBFB;border-top:1px solid #EAEFEA;font-size:11.5px;color:#8B95A5;line-height:1.5;">
               © ${new Date().getFullYear()} ${BRAND_NAME} — Tu libreta de fiados digital.<br/>
-              Si no solicitaste este cambio, puedes ignorar este mensaje con total seguridad.
+              Si no solicitaste este código, ignora este mensaje. Tu cuenta sigue protegida.
             </td>
           </tr>
 
@@ -142,43 +100,32 @@ function getTemplate({
 `;
 }
 
-// ✉️ Contenidos adaptados al tipo de evento
+// ✉️ Contenidos adaptados al tipo de evento (Enfoque en código)
 function getContent(emailType: string) {
   switch (emailType) {
     case "recovery":
       return {
-        subject: "Recupera tu contraseña en Tenderito 🔑",
-        title: "Restablecer tu contraseña",
-        message: "Recibimos una solicitud para cambiar tu contraseña de Tenderito. Usa el código de 6 dígitos en tu app o haz clic en el botón inferior:",
-        buttonText: "Restablecer contraseña",
+        subject: "Tu código de recuperación de Tenderito 🔑",
+        title: "Restablece tu contraseña",
+        message: "Hemos generado tu código de seguridad para cambiar la contraseña. Ingrésalo en la app de Tenderito:",
       };
     case "signup":
       return {
-        subject: "Confirma tu cuenta en Tenderito 🛒",
-        title: "¡Bienvenido a Tenderito!",
-        message: "Falta un solo paso para activar tu libreta de fiados digital. Confirma tu correo para comenzar:",
-        buttonText: "Confirmar mi cuenta",
+        subject: "Tu código de verificación de Tenderito 🛒",
+        title: "Confirma tu cuenta",
+        message: "Ingresa el siguiente código de seguridad en la aplicación para activar tu libreta:",
       };
     case "magiclink":
       return {
-        subject: "Tu acceso rápido a Tenderito ✨",
+        subject: "Tu código de acceso a Tenderito ✨",
         title: "Acceso seguro a tu cuenta",
-        message: "Usa este enlace o código para ingresar a tu libreta sin necesidad de contraseña:",
-        buttonText: "Ingresar a mi tienda",
-      };
-    case "email_change":
-      return {
-        subject: "Confirma tu nuevo correo en Tenderito ✉️",
-        title: "Confirmar cambio de correo",
-        message: "Confirma este correo electrónico para actualizar tu cuenta de Tenderito.",
-        buttonText: "Confirmar cambio",
+        message: "Ingresa el siguiente código en Tenderito para entrar a tu tienda:",
       };
     default:
       return {
-        subject: "Notificación de Tenderito",
-        title: "Notificación de tu cuenta",
-        message: "Tienes una notificación importante en tu cuenta de Tenderito.",
-        buttonText: "Ir a Tenderito",
+        subject: "Tu código de seguridad de Tenderito",
+        title: "Código de verificación",
+        message: "Usa el siguiente código en la app de Tenderito para continuar:",
       };
   }
 }
@@ -261,8 +208,6 @@ serve(async (req: Request) => {
       title: content.title,
       message: content.message,
       token,
-      buttonText: content.buttonText,
-      url: actionUrl,
       logoUrl,
     });
 

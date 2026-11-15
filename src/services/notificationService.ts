@@ -5,14 +5,14 @@ import { register_fcm_token } from './deviceService';
 import { queryClient } from '../lib/queryClient';
 import { showAlert } from '../utils/alert';
 
-// Configuración de Firebase Web (sincronizada con el proyecto tenderito-5c02d de React Native)
+// Configuración de Firebase Web leída exclusivamente de variables de entorno
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyB16i2EvubMIjBjqXh0wN3Vxitm9Lh1rlk',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'tenderito-5c02d.firebaseapp.com',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'tenderito-5c02d',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'tenderito-5c02d.firebasestorage.app',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '584972929801',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:584972929801:web:c6d7e8f9a0b1c2d3',
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '',
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || '',
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '',
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || '',
 };
 
 // Clave pública VAPID configurada mediante variable de entorno
