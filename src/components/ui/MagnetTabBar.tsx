@@ -151,7 +151,7 @@ export function MagnetTabBar({ active, onPressItem }: MagnetTabBarProps) {
         right: 0,
         display: 'flex',
         justifyContent: 'center',
-        padding: '0 16px 16px',
+        padding: '0 16px calc(14px + env(safe-area-inset-bottom, 0px))',
         pointerEvents: 'none',
         zIndex: 1000,
       }}>

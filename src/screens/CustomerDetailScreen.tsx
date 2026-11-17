@@ -20,6 +20,7 @@ import {
   IoSearchOutline,
   IoCashOutline,
   IoLogoWhatsapp,
+  IoTrashOutline,
 } from 'react-icons/io5';
 import { SyncBadge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -30,10 +31,11 @@ import { StoreHistoryLockNotice } from '../components/ui/StoreHistoryLockNotice'
 import { MagnetFilterBar } from '../components/ui/MagnetFilterBar';
 import { showAlert } from '../components/ui/AlertModal';
 import { fetchCustomerById } from '../services/customers';
-import { fetchCreditsByCustomer } from '../services/credits';
+import { fetchCreditsByCustomer, voidMovement } from '../services/credits';
 import { fetchPaymentsByCustomer } from '../services/payments';
 import { canCreateCreditForCustomer } from '../services/portfolio';
 import { calculateSubscriptionStatus } from '../services/plans';
+import { queryClient } from '../lib/queryClient';
 import { useStore } from '../store/useStore';
 import { Colors, Radius, formatCOP } from '../theme';
 import {
@@ -180,6 +182,7 @@ export function CustomerDetailScreen() {
       amount: Number(c.amount || 0),
       date: c.created_at,
       dueDate: c.due_date,
+      status: c.status,
       estadoServidor: c.estadoServidor,
       notes: null as string | null,
     }));
@@ -191,6 +194,7 @@ export function CustomerDetailScreen() {
       amount: Number(p.amount || 0),
       date: p.payment_date || p.created_at,
       dueDate: null,
+      status: (p as any).status || 'completed',
       estadoServidor: p.estadoServidor,
       notes: p.notes,
     }));
@@ -228,11 +232,12 @@ export function CustomerDetailScreen() {
     );
   }, [allMovements, selectedMonth]);
 
-  // Totales de movimientos del mes seleccionado
+  // Totales de movimientos del mes seleccionado (excluye cancelados)
   const monthTotals = useMemo(() => {
     let creditsSum = 0;
     let paymentsSum = 0;
     monthMovements.forEach(m => {
+      if (m.status === 'cancelled') return;
       if (m.kind === 'credit') {
         creditsSum += m.amount;
       }
@@ -327,6 +332,59 @@ export function CustomerDetailScreen() {
     window.open(url, '_blank');
   };
 
+  const handleVoidMovement = (item: any) => {
+    const isCredit = item.kind === 'credit';
+    const tipo = isCredit ? 'este fiado' : 'este abono';
+    showAlert({
+      title: isCredit ? '¿Anular fiado?' : '¿Anular abono?',
+      message: `¿Estás seguro de anular ${tipo} por ${formatCOP(item.amount)} ("${item.title}")? El saldo del cliente se recalculará automáticamente. Esta acción no se puede deshacer.`,
+      type: 'destructive',
+      buttons: [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Sí, anular',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await voidMovement({
+                id: item.id,
+                kind: item.kind,
+                customerId: id!,
+                amount: item.amount,
+              });
+              await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ['credits', id] }),
+                queryClient.invalidateQueries({ queryKey: ['payments', id] }),
+                queryClient.invalidateQueries({ queryKey: ['customer', id] }),
+                queryClient.invalidateQueries({ queryKey: ['customers'] }),
+                queryClient.invalidateQueries({ queryKey: ['stats'] }),
+              ]);
+              await Promise.all([
+                credits.refetch(),
+                payments.refetch(),
+                customer.refetch(),
+              ]);
+              showAlert({
+                title: 'Movimiento anulado',
+                message: `Se canceló el ${isCredit ? 'fiado' : 'abono'} y el saldo fue recalculado.`,
+                type: 'success',
+              });
+            } catch (err: any) {
+              showAlert({
+                title: 'Error al anular',
+                message: err?.message || 'No se pudo anular el movimiento.',
+                type: 'destructive',
+              });
+            }
+          },
+        },
+      ],
+    });
+  };
+
   return (
     <div
       style={{
@@ -335,6 +393,7 @@ export function CustomerDetailScreen() {
         minHeight: '100vh',
         backgroundColor: Colors.background,
         position: 'relative',
+        paddingBottom: 'calc(140px + env(safe-area-inset-bottom, 0px))',
         boxSizing: 'border-box',
       }}>
       <DynamicBrandCurves position="bottom-left" />
@@ -886,7 +945,8 @@ export function CustomerDetailScreen() {
           <div>
             {filteredMovements.map((item, index) => {
               const isCredit = item.kind === 'credit';
-              const overdue = isCredit && isOverdueBogota(item.dueDate);
+              const isCancelled = item.status === 'cancelled';
+              const overdue = isCredit && !isCancelled && isOverdueBogota(item.dueDate);
 
               return (
                 <div
@@ -896,11 +956,16 @@ export function CustomerDetailScreen() {
                     flexDirection: 'row',
                     alignItems: 'center',
                     padding: '12px 12px',
-                    backgroundColor: index % 2 === 1 ? '#F8FAFC' : '#FFFFFF',
+                    backgroundColor: isCancelled
+                      ? '#F1F5F9'
+                      : index % 2 === 1
+                      ? '#F8FAFC'
+                      : '#FFFFFF',
                     borderLeft: '1px solid #E2E8F0',
                     borderRight: '1px solid #E2E8F0',
                     borderBottom: '1px solid #E2E8F0',
                     boxSizing: 'border-box',
+                    opacity: isCancelled ? 0.72 : 1,
                   }}>
                   {/* Columna Fecha */}
                   <div style={{ width: 90, flexShrink: 0 }}>
@@ -908,7 +973,8 @@ export function CustomerDetailScreen() {
                       style={{
                         fontSize: 12,
                         fontWeight: 700,
-                        color: Colors.textSecondary,
+                        color: isCancelled ? '#94A3B8' : Colors.textSecondary,
+                        textDecoration: isCancelled ? 'line-through' : 'none',
                       }}>
                       {formatDateDisplay(item.date)}
                     </span>
@@ -920,7 +986,8 @@ export function CustomerDetailScreen() {
                       style={{
                         fontSize: 13,
                         fontWeight: 700,
-                        color: Colors.text,
+                        color: isCancelled ? '#94A3B8' : Colors.text,
+                        textDecoration: isCancelled ? 'line-through' : 'none',
                         overflow: 'hidden',
                         display: '-webkit-box',
                         WebkitLineClamp: 2,
@@ -938,23 +1005,64 @@ export function CustomerDetailScreen() {
                         marginTop: 3,
                         flexWrap: 'wrap',
                       }}>
-                      <div
-                        style={{
-                          padding: '2px 6px',
-                          borderRadius: 4,
-                          backgroundColor: isCredit ? '#FEE2E2' : '#DCFCE7',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                        }}>
-                        <span
+                      {isCancelled ? (
+                        <>
+                          <div
+                            style={{
+                              padding: '2px 7px',
+                              borderRadius: 4,
+                              backgroundColor: '#E2E8F0',
+                              border: '1px solid #CBD5E1',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                            }}>
+                            <span
+                              style={{
+                                fontSize: 10,
+                                fontWeight: 800,
+                                color: '#64748B',
+                              }}>
+                              Cancelado
+                            </span>
+                          </div>
+                          <div
+                            style={{
+                              padding: '2px 6px',
+                              borderRadius: 4,
+                              backgroundColor: '#F1F5F9',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                            }}>
+                            <span
+                              style={{
+                                fontSize: 10,
+                                fontWeight: 700,
+                                color: '#94A3B8',
+                                textDecoration: 'line-through',
+                              }}>
+                              {isCredit ? 'Compra fiada (+)' : 'Abono recibido (-)'}
+                            </span>
+                          </div>
+                        </>
+                      ) : (
+                        <div
                           style={{
-                            fontSize: 10,
-                            fontWeight: 800,
-                            color: isCredit ? Colors.destructive : '#15803D',
+                            padding: '2px 6px',
+                            borderRadius: 4,
+                            backgroundColor: isCredit ? '#FEE2E2' : '#DCFCE7',
+                            display: 'inline-flex',
+                            alignItems: 'center',
                           }}>
-                          {isCredit ? 'Compra fiada (+)' : 'Abono recibido (-)'}
-                        </span>
-                      </div>
+                          <span
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 800,
+                              color: isCredit ? Colors.destructive : '#15803D',
+                            }}>
+                            {isCredit ? 'Compra fiada (+)' : 'Abono recibido (-)'}
+                          </span>
+                        </div>
+                      )}
                       <SyncBadge estadoServidor={item.estadoServidor} />
                     </div>
 
@@ -970,16 +1078,23 @@ export function CustomerDetailScreen() {
                         <IoCalendarOutline
                           size={12}
                           color={
-                            overdue ? Colors.destructive : Colors.textSecondary
+                            isCancelled
+                              ? '#94A3B8'
+                              : overdue
+                              ? Colors.destructive
+                              : Colors.textSecondary
                           }
                         />
                         <span
                           style={{
                             fontSize: 11,
-                            fontWeight: overdue ? 700 : 600,
-                            color: overdue
+                            fontWeight: isCancelled ? 500 : overdue ? 700 : 600,
+                            color: isCancelled
+                              ? '#94A3B8'
+                              : overdue
                               ? Colors.destructive
                               : Colors.textSecondary,
+                            textDecoration: isCancelled ? 'line-through' : 'none',
                           }}>
                           {overdue
                             ? `Vencido el: ${formatDateDisplay(item.dueDate)}`
@@ -1001,12 +1116,57 @@ export function CustomerDetailScreen() {
                       style={{
                         fontSize: 14,
                         fontWeight: 800,
-                        color: isCredit ? Colors.destructive : '#15803D',
+                        color: isCancelled
+                          ? '#94A3B8'
+                          : isCredit
+                          ? Colors.destructive
+                          : '#15803D',
+                        textDecoration: isCancelled ? 'line-through' : 'none',
                         whiteSpace: 'nowrap',
                       }}>
                       {isCredit ? '+' : '−'}
                       {formatCOP(item.amount)}
                     </span>
+                  </div>
+
+                  {/* Botón Anular Movimiento */}
+                  <div
+                    style={{
+                      marginLeft: 6,
+                      width: 28,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}>
+                    {!isCancelled && (
+                      <button
+                        type="button"
+                        onClick={() => handleVoidMovement(item)}
+                        title={isCredit ? 'Anular fiado' : 'Anular abono'}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          padding: '6px',
+                          borderRadius: 8,
+                          cursor: 'pointer',
+                          color: Colors.textSecondary,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'all 0.15s',
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.backgroundColor = '#FEE2E2';
+                          e.currentTarget.style.color = Colors.destructive;
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                          e.currentTarget.style.color = Colors.textSecondary;
+                        }}>
+                        <IoTrashOutline size={16} />
+                      </button>
+                    )}
                   </div>
                 </div>
               );

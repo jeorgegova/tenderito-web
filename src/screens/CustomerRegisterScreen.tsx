@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   IoArrowBack,
@@ -23,11 +23,61 @@ export function CustomerRegisterScreen() {
   const [document, setDocument] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [customer, setCustomer] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
+  // Validación estilo Formik (touched + errors en tiempo real)
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  const phoneRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const confirmPasswordRef = useRef<HTMLInputElement>(null);
+
+  const errors = useMemo(() => {
+    const errs: Record<string, string> = {};
+    if (!document.trim()) {
+      errs.document = 'Ingresa tu documento o cédula';
+    }
+    const cleanPhone = phone.trim().replace(/\D/g, '');
+    if (!phone.trim()) {
+      errs.phone = 'Ingresa tu número celular';
+    } else if (cleanPhone.length < 10) {
+      errs.phone = 'El celular debe tener al menos 10 dígitos';
+    }
+    if (!password) {
+      errs.password = 'La contraseña es requerida';
+    } else if (password.length < 6) {
+      errs.password = 'Mínimo 6 caracteres';
+    }
+    if (!confirmPassword) {
+      errs.confirmPassword = 'Debes confirmar tu contraseña';
+    } else if (confirmPassword !== password) {
+      errs.confirmPassword = 'Las contraseñas no coinciden';
+    }
+    return errs;
+  }, [document, phone, password, confirmPassword]);
+
+  const handleBlur = (field: string) => {
+    setTouched(prev => ({ ...prev, [field]: true }));
+  };
+
+  // Al digitar confirmar contraseña, valida inmediatamente si no coincide
+  const confirmPasswordError =
+    (touched.confirmPassword || confirmPassword.length > 0) && errors.confirmPassword
+      ? errors.confirmPassword
+      : undefined;
+
+  const passwordError =
+    (touched.password || (password.length > 0 && password.length < 6 && (touched.confirmPassword || confirmPassword.length > 0))) && errors.password
+      ? errors.password
+      : touched.password && errors.password
+      ? errors.password
+      : undefined;
+
   async function checkDocument() {
     if (!document.trim()) {
+      setTouched(prev => ({ ...prev, document: true }));
       return showAlert({
         title: 'Faltan datos',
         message: 'Ingresa tu cédula',
@@ -36,7 +86,8 @@ export function CustomerRegisterScreen() {
     }
     setLoading(true);
     try {
-      const result = await findCustomerForActivation(document.trim());
+      const cleanDoc = document.trim();
+      const result = await findCustomerForActivation(cleanDoc);
       if (!result) {
         return showAlert({
           title: 'No te encontramos',
@@ -44,6 +95,60 @@ export function CustomerRegisterScreen() {
           type: 'warning',
         });
       }
+
+      // Si la cuenta ya fue activada previamente
+      if (result.is_activated) {
+        return showAlert({
+          title: 'Cuenta ya registrada',
+          message: 'Esta cuenta ya existe y se encuentra activa. Puedes iniciar sesión o restablecer tu contraseña.',
+          type: 'info',
+          buttons: [
+            {
+              text: 'Restablecer contraseña',
+              onPress: () =>
+                navigate(
+                  `/forgot-password?role=customer&document=${encodeURIComponent(cleanDoc)}`,
+                ),
+            },
+            {
+              text: 'Iniciar sesión',
+              onPress: () =>
+                navigate(
+                  `/login?role=customer&document=${encodeURIComponent(cleanDoc)}`,
+                ),
+            },
+          ],
+        });
+      }
+
+      // Validación complementaria contra auth.users
+      const { data: emailExists } = await supabase.rpc('check_user_email_exists', {
+        p_email: customerAuthEmail(cleanDoc),
+      });
+      if (emailExists) {
+        return showAlert({
+          title: 'Cuenta ya registrada',
+          message: 'Esta cuenta ya existe y se encuentra activa. Puedes iniciar sesión o restablecer tu contraseña.',
+          type: 'info',
+          buttons: [
+            {
+              text: 'Restablecer contraseña',
+              onPress: () =>
+                navigate(
+                  `/forgot-password?role=customer&document=${encodeURIComponent(cleanDoc)}`,
+                ),
+            },
+            {
+              text: 'Iniciar sesión',
+              onPress: () =>
+                navigate(
+                  `/login?role=customer&document=${encodeURIComponent(cleanDoc)}`,
+                ),
+            },
+          ],
+        });
+      }
+
       setCustomer(result);
     } catch (error: any) {
       showAlert({
@@ -57,16 +162,26 @@ export function CustomerRegisterScreen() {
   }
 
   async function activate() {
-    if (!customer || !phone.trim() || password.length < 6) {
+    setTouched(prev => ({
+      ...prev,
+      phone: true,
+      password: true,
+      confirmPassword: true,
+    }));
+
+    if (errors.phone || errors.password || errors.confirmPassword) {
+      const firstError = errors.phone || errors.password || errors.confirmPassword;
       return showAlert({
-        title: 'Faltan datos',
-        message: 'Confirma tu teléfono y crea una contraseña de mínimo 6 caracteres.',
+        title: 'Verifica los campos',
+        message: firstError,
         type: 'warning',
       });
     }
+
     setLoading(true);
+    const cleanDoc = document.trim();
     const { data, error } = await supabase.auth.signUp({
-      email: customerAuthEmail(document),
+      email: customerAuthEmail(cleanDoc),
       password,
       options: {
         data: { user_type: 'customer', customer_id: customer.customer_id, phone },
@@ -75,6 +190,34 @@ export function CustomerRegisterScreen() {
     setLoading(false);
 
     if (error || !data.user) {
+      const errMsg = (error?.message || '').toLowerCase();
+      if (
+        errMsg.includes('already registered') ||
+        errMsg.includes('ya está registrado') ||
+        errMsg.includes('already exists')
+      ) {
+        return showAlert({
+          title: 'Cuenta ya registrada',
+          message: 'Tu cuenta ya fue activada anteriormente. Si no recuerdas tu contraseña, puedes restablecerla.',
+          type: 'info',
+          buttons: [
+            {
+              text: 'Restablecer contraseña',
+              onPress: () =>
+                navigate(
+                  `/forgot-password?role=customer&document=${encodeURIComponent(cleanDoc)}`,
+                ),
+            },
+            {
+              text: 'Iniciar sesión',
+              onPress: () =>
+                navigate(
+                  `/login?role=customer&document=${encodeURIComponent(cleanDoc)}`,
+                ),
+            },
+          ],
+        });
+      }
       return showAlert({
         title: 'No se pudo activar',
         message: error?.message ?? 'Intenta de nuevo',
@@ -175,6 +318,8 @@ export function CustomerRegisterScreen() {
             label="Número de documento"
             value={document}
             onChange={e => setDocument(e.target.value)}
+            onBlur={() => handleBlur('document')}
+            error={touched.document ? errors.document : undefined}
             placeholder="Ej: 1020304050"
             disabled={!!customer}
           />
@@ -216,18 +361,53 @@ export function CustomerRegisterScreen() {
               </div>
 
               <Input
+                ref={phoneRef}
                 label="Confirma tu celular"
                 value={phone}
                 onChange={e => setPhone(e.target.value)}
+                onBlur={() => handleBlur('phone')}
+                error={touched.phone ? errors.phone : undefined}
                 placeholder="Ej: 3001234567"
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    passwordRef.current?.focus();
+                  }
+                }}
               />
 
               <Input
+                ref={passwordRef}
                 label="Crea una contraseña"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
+                onBlur={() => handleBlur('password')}
+                error={passwordError}
                 type="password"
                 placeholder="Mínimo 6 caracteres"
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    confirmPasswordRef.current?.focus();
+                  }
+                }}
+              />
+
+              <Input
+                ref={confirmPasswordRef}
+                label="Confirmar contraseña"
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                onBlur={() => handleBlur('confirmPassword')}
+                error={confirmPasswordError}
+                type="password"
+                placeholder="Repite tu contraseña"
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    activate();
+                  }
+                }}
               />
 
               <Button

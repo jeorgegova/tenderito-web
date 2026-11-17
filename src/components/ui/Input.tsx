@@ -19,19 +19,22 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   pill?: boolean;
 }
 
-export function Input({
-  label,
-  error,
-  leadingIcon,
-  trailingIcon,
-  onTrailingPress,
-  pill,
-  type = 'text',
-  style,
-  onFocus,
-  onBlur,
-  ...rest
-}: InputProps) {
+export const Input = React.forwardRef<HTMLInputElement, InputProps>(function Input(
+  {
+    label,
+    error,
+    leadingIcon,
+    trailingIcon,
+    onTrailingPress,
+    pill,
+    type = 'text',
+    style,
+    onFocus,
+    onBlur,
+    ...rest
+  },
+  ref,
+) {
   const [showPassword, setShowPassword] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const isPill = pill || leadingIcon === 'search' || leadingIcon === 'search-outline';
@@ -155,6 +158,7 @@ export function Input({
         {renderLeadingIcon()}
 
         <input
+          ref={ref}
           type={isPassword ? (showPassword ? 'text' : 'password') : type}
           onFocus={e => {
             setIsFocused(true);
@@ -188,4 +192,4 @@ export function Input({
       )}
     </div>
   );
-}
+});

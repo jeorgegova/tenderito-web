@@ -54,7 +54,7 @@ export function CustomersScreen() {
         minHeight: '100vh',
         backgroundColor: Colors.background,
         position: 'relative',
-        paddingBottom: 110,
+        paddingBottom: 'calc(140px + env(safe-area-inset-bottom, 0px))',
         overflowX: 'hidden',
       }}>
       <DynamicBrandCurves position="top-right" />
@@ -236,7 +236,7 @@ export function CustomersScreen() {
         onClick={() => setModal(true)}
         style={{
           position: 'fixed',
-          bottom: 84,
+          bottom: 'calc(94px + env(safe-area-inset-bottom, 0px))',
           right: 20,
           backgroundColor: Colors.primary,
           color: '#FFFFFF',

@@ -15,6 +15,7 @@ import {
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
+import { MagnetRoleSwitch } from '../components/ui/MagnetRoleSwitch';
 import { DynamicBrandCurves } from '../components/ui/DynamicBrandCurves';
 import { showAlert } from '../utils/alert';
 import { supabase } from '../lib/supabase';
@@ -58,6 +59,21 @@ export function ForgotPasswordScreen() {
 
     setLoading(true);
     try {
+      // 1. Verificar si el correo realmente existe en la plataforma
+      const { data: exists, error: checkError } = await supabase.rpc('check_user_email_exists', {
+        p_email: cleanEmail,
+      });
+
+      if (checkError) {
+        console.warn('[ForgotPassword] Error consultando correo registrado:', checkError);
+      } else if (exists === false) {
+        return showAlert({
+          title: 'Correo no registrado',
+          message: 'No existe ninguna cuenta registrada con este correo electrónico. Verifica que lo hayas escrito bien.',
+          type: 'destructive',
+        });
+      }
+
       const redirectUrl = `${window.location.origin}/reset-password`;
       const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
         redirectTo: redirectUrl,
@@ -290,52 +306,15 @@ export function ForgotPasswordScreen() {
           />
         </div>
 
-        {/* Selector de Rol */}
-        <div
-          style={{
-            display: 'flex',
-            backgroundColor: '#FFFFFF',
-            borderRadius: 24,
-            padding: 4,
-            width: '100%',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
-            boxSizing: 'border-box',
-          }}>
-          {[
-            { id: 'store', label: 'Soy tendero', icon: <IoStorefrontOutline size={18} /> },
-            { id: 'customer', label: 'Soy cliente', icon: <IoPersonOutline size={18} /> },
-          ].map(r => {
-            const active = role === r.id;
-            return (
-              <button
-                key={r.id}
-                type="button"
-                onClick={() => {
-                  setRole(r.id as any);
-                  setStepStore('request');
-                }}
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  padding: '10px 14px',
-                  borderRadius: 20,
-                  backgroundColor: active ? Colors.primaryLight : 'transparent',
-                  color: active ? Colors.primary : Colors.textSecondary,
-                  fontSize: 14,
-                  fontWeight: 700,
-                  border: 'none',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                }}>
-                {r.icon}
-                <span>{r.label}</span>
-              </button>
-            );
-          })}
-        </div>
+        {/* Selector de Rol con efecto Magnet */}
+        <MagnetRoleSwitch
+          role={role}
+          onChange={newRole => {
+            setRole(newRole);
+            setStepStore('request');
+          }}
+          style={{ marginBottom: 0 }}
+        />
 
         {/* Tarjeta de Recuperación */}
         <Card
@@ -435,6 +414,11 @@ export function ForgotPasswordScreen() {
                     label="Confirmar nueva contraseña"
                     value={confirmPasswordStore}
                     onChange={e => setConfirmPasswordStore(e.target.value)}
+                    error={
+                      confirmPasswordStore.length > 0 && confirmPasswordStore !== newPasswordStore
+                        ? 'Las contraseñas no coinciden'
+                        : undefined
+                    }
                     type="password"
                     placeholder="Repite la contraseña"
                   />
@@ -513,6 +497,11 @@ export function ForgotPasswordScreen() {
                 label="Confirmar nueva contraseña"
                 value={confirmPasswordCust}
                 onChange={e => setConfirmPasswordCust(e.target.value)}
+                error={
+                  confirmPasswordCust.length > 0 && confirmPasswordCust !== newPasswordCust
+                    ? 'Las contraseñas no coinciden'
+                    : undefined
+                }
                 type="password"
                 placeholder="Repite la contraseña"
               />

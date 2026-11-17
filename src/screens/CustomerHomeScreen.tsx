@@ -240,6 +240,7 @@ export function CustomerHomeScreen() {
         amount: Number(c.amount || 0),
         date: c.created_at,
         dueDate: c.due_date,
+        status: c.status,
         notes: null as string | null,
       }));
 
@@ -252,6 +253,7 @@ export function CustomerHomeScreen() {
         amount: Number(p.amount || 0),
         date: p.payment_date,
         dueDate: null as string | null,
+        status: p.status || 'completed',
         notes: p.notes,
       }));
 
@@ -260,11 +262,12 @@ export function CustomerHomeScreen() {
     );
   }, [data, selectedStoreId]);
 
-  // Totales de la tienda seleccionada
+  // Totales de la tienda seleccionada (excluye cancelados)
   const storeTotals = useMemo(() => {
     let creditsSum = 0;
     let paymentsSum = 0;
     storeMovements.forEach(m => {
+      if (m.status === 'cancelled') return;
       if (m.kind === 'credit') creditsSum += m.amount;
       if (m.kind === 'payment') paymentsSum += m.amount;
     });
@@ -772,6 +775,7 @@ export function CustomerHomeScreen() {
             ) : (
               filteredStoreMovements.map((item, index) => {
                 const isCredit = item.kind === 'credit';
+                const isCancelled = item.status === 'cancelled';
                 return (
                   <div
                     key={item.id}
@@ -779,39 +783,104 @@ export function CustomerHomeScreen() {
                       display: 'flex',
                       alignItems: 'center',
                       padding: '12px',
-                      backgroundColor: index % 2 === 1 ? Colors.cardAlt : Colors.card,
-                      borderBottom: index === filteredStoreMovements.length - 1 ? 'none' : `1px solid ${Colors.border}`,
+                      backgroundColor: isCancelled
+                        ? '#F1F5F9'
+                        : index % 2 === 1
+                        ? Colors.cardAlt
+                        : Colors.card,
+                      opacity: isCancelled ? 0.72 : 1,
+                      borderBottom:
+                        index === filteredStoreMovements.length - 1
+                          ? 'none'
+                          : `1px solid ${Colors.border}`,
                     }}>
                     {/* Fecha */}
                     <div style={{ width: 86, flexShrink: 0 }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: Colors.textSecondary }}>
+                      <span
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 700,
+                          color: isCancelled ? '#94A3B8' : Colors.textSecondary,
+                          textDecoration: isCancelled ? 'line-through' : 'none',
+                        }}>
                         {formatDateDisplay(item.date)}
                       </span>
                     </div>
 
                     {/* Detalle */}
                     <div style={{ flex: 1, padding: '0 6px' }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: Colors.text }}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 700,
+                          color: isCancelled ? '#94A3B8' : Colors.text,
+                          textDecoration: isCancelled ? 'line-through' : 'none',
+                        }}>
                         {item.title}
                       </div>
 
-                      <div style={{ marginTop: 3 }}>
-                        <span
-                          style={{
-                            display: 'inline-block',
-                            padding: '2px 6px',
-                            borderRadius: 4,
-                            fontSize: 10,
-                            fontWeight: 800,
-                            backgroundColor: isCredit ? '#FEE2E2' : '#DCFCE7',
-                            color: isCredit ? Colors.destructive : '#15803D',
-                          }}>
-                          {isCredit ? 'Compra fiada (+)' : 'Abono realizado (-)'}
-                        </span>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          marginTop: 3,
+                          flexWrap: 'wrap',
+                        }}>
+                        {isCancelled ? (
+                          <>
+                            <span
+                              style={{
+                                display: 'inline-block',
+                                padding: '2px 7px',
+                                borderRadius: 4,
+                                fontSize: 10,
+                                fontWeight: 800,
+                                backgroundColor: '#E2E8F0',
+                                border: '1px solid #CBD5E1',
+                                color: '#64748B',
+                              }}>
+                              Cancelado
+                            </span>
+                            <span
+                              style={{
+                                display: 'inline-block',
+                                padding: '2px 6px',
+                                borderRadius: 4,
+                                fontSize: 10,
+                                fontWeight: 700,
+                                backgroundColor: '#F1F5F9',
+                                color: '#94A3B8',
+                                textDecoration: 'line-through',
+                              }}>
+                              {isCredit ? 'Compra fiada (+)' : 'Abono realizado (-)'}
+                            </span>
+                          </>
+                        ) : (
+                          <span
+                            style={{
+                              display: 'inline-block',
+                              padding: '2px 6px',
+                              borderRadius: 4,
+                              fontSize: 10,
+                              fontWeight: 800,
+                              backgroundColor: isCredit ? '#FEE2E2' : '#DCFCE7',
+                              color: isCredit ? Colors.destructive : '#15803D',
+                            }}>
+                            {isCredit ? 'Compra fiada (+)' : 'Abono realizado (-)'}
+                          </span>
+                        )}
                       </div>
 
                       {item.dueDate && (
-                        <div style={{ fontSize: 10, color: Colors.destructive, fontWeight: 600, marginTop: 2 }}>
+                        <div
+                          style={{
+                            fontSize: 10,
+                            color: isCancelled ? '#94A3B8' : Colors.destructive,
+                            fontWeight: 600,
+                            marginTop: 2,
+                            textDecoration: isCancelled ? 'line-through' : 'none',
+                          }}>
                           Pagar antes de: {formatDateDisplay(item.dueDate)}
                         </div>
                       )}
@@ -823,7 +892,12 @@ export function CustomerHomeScreen() {
                         style={{
                           fontSize: 14,
                           fontWeight: 800,
-                          color: isCredit ? Colors.destructive : '#15803D',
+                          color: isCancelled
+                            ? '#94A3B8'
+                            : isCredit
+                            ? Colors.destructive
+                            : '#15803D',
+                          textDecoration: isCancelled ? 'line-through' : 'none',
                         }}>
                         {isCredit ? '+' : '−'}
                         {formatCOP(item.amount)}
@@ -1361,6 +1435,21 @@ export function CustomerHomeScreen() {
                       <div style={{ fontSize: 16, fontWeight: 800, color: Colors.text }}>
                         {storeName}
                       </div>
+                      {store?.phone && (
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            fontSize: 12,
+                            color: Colors.textSecondary,
+                            marginTop: 2,
+                            fontWeight: 500,
+                          }}>
+                          <IoCallOutline size={12} color={Colors.primary} />
+                          <span>{store.phone}</span>
+                        </div>
+                      )}
                       {store?.address && (
                         <div
                           style={{

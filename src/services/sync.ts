@@ -570,9 +570,9 @@ export async function insertOrReplacePayment(db: any, p: any) {
     db,
     `INSERT OR REPLACE INTO payments (
        local_id, server_id, customer_id, credit_id, store_id,
-       amount, notes, payment_date, estadoServidor, sync_status,
+       amount, notes, status, payment_date, estadoServidor, sync_status,
        last_synced_at, created_at, updated_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
     [
       localId,
       p.id,
@@ -581,6 +581,7 @@ export async function insertOrReplacePayment(db: any, p: any) {
       p.store_id || '',
       Number(p.amount),
       p.notes || null,
+      p.status || 'completed',
       p.payment_date || now,
       'synced',
       'synced',
@@ -639,7 +640,7 @@ async function pullRemoteData(db: any): Promise<boolean> {
     const lastWriteDatePay = await getWriteDate(db, 'payments', activeStoreId);
     let payQuery = supabase
       .from('payments')
-      .select('id, store_id, customer_id, credit_id, amount, notes, payment_date, created_at')
+      .select('id, store_id, customer_id, credit_id, amount, notes, status, payment_date, created_at')
       .eq('store_id', activeStoreId)
       .order('created_at', {ascending: true})
       .limit(PULL_PAGE_LIMIT);

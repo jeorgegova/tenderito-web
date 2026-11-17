@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   IoStorefrontOutline,
@@ -9,6 +9,7 @@ import {
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
+import { MagnetRoleSwitch } from '../components/ui/MagnetRoleSwitch';
 import { showAlert } from '../components/ui/AlertModal';
 import { supabase } from '../lib/supabase';
 import { customerAuthEmail } from '../lib/customerAuth';
@@ -28,6 +29,7 @@ export function LoginScreen() {
   const [document, setDocument] = useState(initialDoc);
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const passwordInputRef = useRef<HTMLInputElement>(null);
   const appVersion = getAppVersion();
 
   async function onLogin() {
@@ -88,50 +90,8 @@ export function LoginScreen() {
           />
         </div>
 
-        {/* Selector de Rol */}
-        <div
-          style={{
-            display: 'flex',
-            backgroundColor: '#FFFFFF',
-            borderRadius: 24,
-            padding: 4,
-            width: '100%',
-            marginBottom: 16,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
-            boxSizing: 'border-box',
-          }}>
-          {[
-            { id: 'store', label: 'Soy tendero', icon: <IoStorefrontOutline size={18} /> },
-            { id: 'customer', label: 'Soy cliente', icon: <IoPersonOutline size={18} /> },
-          ].map(r => {
-            const active = role === r.id;
-            return (
-              <button
-                key={r.id}
-                type="button"
-                onClick={() => setRole(r.id as any)}
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  padding: '10px 14px',
-                  borderRadius: 20,
-                  backgroundColor: active ? Colors.primaryLight : 'transparent',
-                  color: active ? Colors.primary : Colors.textSecondary,
-                  fontSize: 14,
-                  fontWeight: 700,
-                  border: 'none',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                }}>
-                {r.icon}
-                <span>{r.label}</span>
-              </button>
-            );
-          })}
-        </div>
+        {/* Selector de Rol con efecto Magnet */}
+        <MagnetRoleSwitch role={role} onChange={setRole} />
 
         {/* Tarjeta de Formulario */}
         <Card
@@ -144,16 +104,30 @@ export function LoginScreen() {
             flexDirection: 'column',
             gap: 16,
           }}>
-          <h2
-            style={{
-              fontSize: 20,
-              fontWeight: 800,
-              color: Colors.text,
-              margin: '0 0 4px',
-              textAlign: 'center',
-            }}>
-            {role === 'store' ? 'Entra a tu tienda' : 'Entra a tu cuenta'}
-          </h2>
+          <div style={{ textAlign: 'center', marginBottom: 2 }}>
+            <h2
+              style={{
+                fontSize: 19,
+                fontWeight: 800,
+                color: Colors.text,
+                margin: 0,
+                letterSpacing: '-0.3px',
+              }}>
+              {role === 'store' ? 'Acceso para tenderos' : 'Acceso para clientes'}
+            </h2>
+            <p
+              style={{
+                fontSize: 13,
+                color: Colors.textSecondary,
+                margin: '5px 0 0',
+                lineHeight: '18px',
+                fontWeight: 500,
+              }}>
+              {role === 'store'
+                ? 'Administra tu tienda, tus clientes y tus cuentas por cobrar.'
+                : 'Consulta tus fiados y movimientos de tu cuenta en tu tienda.'}
+            </p>
+          </div>
 
           {role === 'store' ? (
             <Input
@@ -162,6 +136,12 @@ export function LoginScreen() {
               onChange={e => setEmail(e.target.value)}
               type="email"
               placeholder="tutienda@mail.com"
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  passwordInputRef.current?.focus();
+                }
+              }}
             />
           ) : (
             <Input
@@ -169,15 +149,28 @@ export function LoginScreen() {
               value={document}
               onChange={e => setDocument(e.target.value)}
               placeholder="Tu cédula"
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  passwordInputRef.current?.focus();
+                }
+              }}
             />
           )}
 
           <Input
+            ref={passwordInputRef}
             label="Contraseña"
             value={password}
             onChange={e => setPassword(e.target.value)}
             type="password"
             placeholder="••••••••"
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                onLogin();
+              }
+            }}
           />
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: -6 }}>
