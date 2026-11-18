@@ -251,6 +251,7 @@ export async function notifyCustomerMovement(params: {
   customerId: string;
   storeId?: string | null;
   type: 'payment' | 'credit';
+  status?: 'active' | 'cancelled';
   amount: number;
   concept?: string | null;
   notes?: string | null;
@@ -262,7 +263,7 @@ export async function notifyCustomerMovement(params: {
     }
 
     console.log(
-      `[notifyCustomerMovement] Iniciando notificación para cliente ${params.customerId} (tipo: ${params.type}, monto: ${params.amount})...`,
+      `[notifyCustomerMovement] Iniciando notificación para cliente ${params.customerId} (tipo: ${params.type}, status: ${params.status || 'active'}, monto: ${params.amount})...`,
     );
 
     // 1. Broadcast instantáneo mediante Supabase Realtime (llega de inmediato a clientes conectados)
@@ -275,6 +276,7 @@ export async function notifyCustomerMovement(params: {
             event: 'movement',
             payload: {
               type: params.type,
+              status: params.status || 'active',
               amount: params.amount,
               concept: params.concept,
               storeId: params.storeId,
@@ -297,6 +299,7 @@ export async function notifyCustomerMovement(params: {
           amount: params.amount,
           concept: params.concept,
           notes: params.notes,
+          status: params.status || 'active',
         },
       },
     };

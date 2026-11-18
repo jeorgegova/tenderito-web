@@ -335,6 +335,18 @@ export function CustomerDetailScreen() {
   const handleVoidMovement = (item: any) => {
     const isCredit = item.kind === 'credit';
     const tipo = isCredit ? 'este fiado' : 'este abono';
+
+    // Validación obligatoria: no dejar cancelar más saldo del que actualmente debe el cliente
+    // para evitar saldos a favor (deuda negativa oculta).
+    if (isCredit && item.amount > currentBalance) {
+      showAlert({
+        title: 'No es posible anular este fiado',
+        message: `El valor de este fiado (${formatCOP(item.amount)}) supera la deuda actual del cliente (${formatCOP(currentBalance)}). No puedes anular más saldo del que actualmente debe para no generar saldo a favor.\n\nSi deseas anularlo, primero debes anular los abonos correspondientes.`,
+        type: 'destructive',
+      });
+      return;
+    }
+
     showAlert({
       title: isCredit ? '¿Anular fiado?' : '¿Anular abono?',
       message: `¿Estás seguro de anular ${tipo} por ${formatCOP(item.amount)} ("${item.title}")? El saldo del cliente se recalculará automáticamente. Esta acción no se puede deshacer.`,

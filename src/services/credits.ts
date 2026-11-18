@@ -6,6 +6,7 @@ import {getActiveStoreId} from './storeContext';
 import {getBogotaTodayYMD} from '../utils/format';
 import {useStore} from '../store/useStore';
 import {canCreateCreditForCustomer} from './portfolio';
+import {notifyCustomerMovement} from './deviceService';
 import {supabase} from '../lib/supabase';
 import type {Credit, NewCreditInput} from '../types';
 
@@ -233,6 +234,22 @@ export async function voidMovement(params: {
   const now = new Date().toISOString();
 
   if (kind === 'credit') {
+    // 1. Validar que no se cancele más saldo del que el cliente debe actualmente
+    // para evitar saldos a favor (deuda negativa oculta).
+    const custRows = await getData(
+      db,
+      'SELECT current_balance, server_id FROM customers WHERE (local_id = ? OR server_id = ?) LIMIT 1;',
+      [customerId, customerId],
+    );
+    const currentBal = Number(custRows[0]?.current_balance ?? 0);
+    const targetCustomerServerId = custRows[0]?.server_id || customerId;
+
+    if (amount > currentBal) {
+      throw new Error(
+        `No es posible anular este fiado ($${amount}) porque supera la deuda actual del cliente ($${currentBal}). Anula primero los abonos correspondientes para no generar saldo a favor.`,
+      );
+    }
+
     await executeInTransaction(db, async () => {
       const rows = await getData(
         db,
@@ -246,7 +263,7 @@ export async function voidMovement(params: {
         `UPDATE credits
          SET status = 'cancelled', estadoServidor = ?, sync_status = ?, updated_at = ?
          WHERE (server_id = ? OR local_id = ?);`,
-        [ESTADO_SINCRONIZACION.PENDING, ESTADO_SINCRONIZACION.PENDING, now, id, id],
+        [ESTADO_SINCRONIZACION.SYNCED, ESTADO_SINCRONIZACION.SYNCED, now, id, id],
       );
 
       await executeQuery(
@@ -259,13 +276,37 @@ export async function voidMovement(params: {
 
       if (serverId) {
         try {
-          await supabase.from('credits').update({ status: 'cancelled' }).eq('id', serverId);
+          const { error: updErr } = await supabase.from('credits').update({ status: 'cancelled' }).eq('id', serverId);
+          if (updErr) throw updErr;
+
+          notifyCustomerMovement({
+            customerId: targetCustomerServerId,
+            storeId: activeStoreId,
+            type: 'credit',
+            status: 'cancelled',
+            amount,
+            movementId: serverId,
+          }).catch(notifErr => {
+            console.warn('[voidMovement] Error notificando crédito anulado:', notifErr?.message);
+          });
         } catch (e) {
-          console.warn('[voidMovement] Error anulando crédito en Supabase:', e);
+          console.warn('[voidMovement] Error anulando crédito en Supabase (se pospone para sync):', e);
+          await executeQuery(
+            db,
+            `UPDATE credits SET sync_status = ?, estadoServidor = ? WHERE (server_id = ? OR local_id = ?);`,
+            [ESTADO_SINCRONIZACION.PENDING, ESTADO_SINCRONIZACION.PENDING, id, id],
+          );
         }
       }
     });
   } else {
+    const custRows = await getData(
+      db,
+      'SELECT server_id FROM customers WHERE (local_id = ? OR server_id = ?) LIMIT 1;',
+      [customerId, customerId],
+    );
+    const targetCustomerServerId = custRows[0]?.server_id || customerId;
+
     await executeInTransaction(db, async () => {
       const rows = await getData(
         db,
@@ -279,7 +320,7 @@ export async function voidMovement(params: {
         `UPDATE payments
          SET status = 'cancelled', estadoServidor = ?, sync_status = ?, updated_at = ?
          WHERE (server_id = ? OR local_id = ?);`,
-        [ESTADO_SINCRONIZACION.PENDING, ESTADO_SINCRONIZACION.PENDING, now, id, id],
+        [ESTADO_SINCRONIZACION.SYNCED, ESTADO_SINCRONIZACION.SYNCED, now, id, id],
       );
 
       await executeQuery(
@@ -292,9 +333,26 @@ export async function voidMovement(params: {
 
       if (serverId) {
         try {
-          await supabase.from('payments').update({ status: 'cancelled' }).eq('id', serverId);
+          const { error: updErr } = await supabase.from('payments').update({ status: 'cancelled' }).eq('id', serverId);
+          if (updErr) throw updErr;
+
+          notifyCustomerMovement({
+            customerId: targetCustomerServerId,
+            storeId: activeStoreId,
+            type: 'payment',
+            status: 'cancelled',
+            amount,
+            movementId: serverId,
+          }).catch(notifErr => {
+            console.warn('[voidMovement] Error notificando abono anulado:', notifErr?.message);
+          });
         } catch (e) {
-          console.warn('[voidMovement] Error anulando abono en Supabase:', e);
+          console.warn('[voidMovement] Error anulando abono en Supabase (se pospone para sync):', e);
+          await executeQuery(
+            db,
+            `UPDATE payments SET sync_status = ?, estadoServidor = ? WHERE (server_id = ? OR local_id = ?);`,
+            [ESTADO_SINCRONIZACION.PENDING, ESTADO_SINCRONIZACION.PENDING, id, id],
+          );
         }
       }
     });
