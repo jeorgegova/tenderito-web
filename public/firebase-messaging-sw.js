@@ -44,18 +44,19 @@ try {
   console.warn('[SW] No se pudieron cargar los scripts externos de Firebase:', importErr);
 }
 
-// 3. Configuración del proyecto Firebase (mismo que React Native)
+// 3. Configuración del proyecto Firebase (leída dinámicamente de los parámetros de registro del Service Worker)
+const swParams = new URL(self.location.href).searchParams;
 const firebaseConfig = {
-  apiKey: "AIzaSyB16i2EvubMIjBjqXh0wN3Vxitm9Lh1rlk",
-  authDomain: "tenderito-5c02d.firebaseapp.com",
-  projectId: "tenderito-5c02d",
-  storageBucket: "tenderito-5c02d.firebasestorage.app",
-  messagingSenderId: "584972929801",
-  appId: "1:584972929801:web:c6d7e8f9a0b1c2d3"
+  apiKey: swParams.get('apiKey') || '',
+  authDomain: swParams.get('authDomain') || '',
+  projectId: swParams.get('projectId') || '',
+  storageBucket: swParams.get('storageBucket') || '',
+  messagingSenderId: swParams.get('messagingSenderId') || '',
+  appId: swParams.get('appId') || '',
 };
 
-// 4. Inicializar Firebase Messaging en el Service Worker
-if (typeof firebase !== 'undefined') {
+// 4. Inicializar Firebase Messaging en el Service Worker si la configuración está disponible
+if (typeof firebase !== 'undefined' && firebaseConfig.apiKey) {
   try {
     if (!firebase.apps || !firebase.apps.length) {
       firebase.initializeApp(firebaseConfig);

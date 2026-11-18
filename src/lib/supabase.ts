@@ -1,7 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://tcpisfhtnobrpafinevc.supabase.co';
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjcGlzZmh0bm9icnBhZmluZXZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzMTkxMzYsImV4cCI6MjEwNjg5NTEzNn0.l-0PhpjRDMPXgtej_9uePWrJHkhap-GVk_UsFVapBZ0';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  console.warn(
+    '[supabase] Faltan variables de entorno VITE_SUPABASE_URL o VITE_SUPABASE_ANON_KEY. Configúralas en tu archivo .env o en el panel de Netlify.',
+  );
+}
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {

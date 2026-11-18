@@ -114,6 +114,20 @@ export async function getServiceWorkerRegistration(): Promise<ServiceWorkerRegis
   }
 
   try {
+    // Registrar el Service Worker pasando los parámetros de Firebase dinámicamente
+    if (firebaseConfig.apiKey) {
+      const swUrl =
+        `/firebase-messaging-sw.js?apiKey=${encodeURIComponent(firebaseConfig.apiKey)}` +
+        `&authDomain=${encodeURIComponent(firebaseConfig.authDomain)}` +
+        `&projectId=${encodeURIComponent(firebaseConfig.projectId)}` +
+        `&storageBucket=${encodeURIComponent(firebaseConfig.storageBucket)}` +
+        `&messagingSenderId=${encodeURIComponent(firebaseConfig.messagingSenderId)}` +
+        `&appId=${encodeURIComponent(firebaseConfig.appId)}`;
+
+      const reg = await navigator.serviceWorker.register(swUrl, { scope: '/' });
+      return reg;
+    }
+
     // 1. Verificar si ya hay un registro activo en el scope raíz
     const existing = await navigator.serviceWorker.getRegistration('/');
     if (existing && existing.active) {
@@ -124,7 +138,11 @@ export async function getServiceWorkerRegistration(): Promise<ServiceWorkerRegis
     return await navigator.serviceWorker.ready;
   } catch (err) {
     console.warn('[notifications] Error resolviendo Service Worker Registration:', err);
-    return null;
+    try {
+      return await navigator.serviceWorker.ready;
+    } catch {
+      return null;
+    }
   }
 }
 
