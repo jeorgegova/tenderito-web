@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   IoArrowBack,
@@ -21,13 +21,13 @@ import { Input } from '../components/ui/Input';
 import { showAlert } from '../components/ui/AlertModal';
 import { CreateCustomerModal } from '../components/CreateCustomerModal';
 import { createCredit } from '../services/credits';
-import { fetchCustomers } from '../services/customers';
+import { fetchCustomers, fetchCustomerById } from '../services/customers';
 import { canCreateCreditForCustomer } from '../services/portfolio';
 import { useStore } from '../store/useStore';
 import { Colors, Radius, formatCOP } from '../theme';
 import { FormatMoney, parseMoney, getBogotaTodayYMD } from '../utils/format';
 import { useMutationWithSync } from '../hooks/useMutationWithSync';
-import type { CreditEligibility } from '../types';
+import type { CreditEligibility, Customer } from '../types';
 
 const QUICK_CONCEPTS = [
   'Mercado semanal',
@@ -42,10 +42,17 @@ const QUICK_AMOUNTS = [5000, 10000, 20000, 50000, 100000];
 
 export function NewCreditScreen() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const initialId = searchParams.get('customerId') || undefined;
+  const locationCustomer = (location.state as any)?.customer as Customer | undefined;
 
-  const [customer_id, setCustomerId] = useState(initialId ?? '');
+  const [customer_id, setCustomerId] = useState(
+    initialId ?? locationCustomer?.id ?? locationCustomer?.server_id ?? locationCustomer?.local_id ?? '',
+  );
+  const [createdCustomerFallback, setCreatedCustomerFallback] = useState<Customer | null>(
+    locationCustomer || null,
+  );
   const [concept, setConcept] = useState('');
   const [amount, setAmount] = useState('');
   const [dueDate, setDueDate] = useState('');
@@ -54,12 +61,48 @@ export function NewCreditScreen() {
   const [eligibility, setEligibility] = useState<CreditEligibility | null>(null);
   const profile = useStore(s => s.profile);
 
+  useEffect(() => {
+    if (initialId && initialId !== customer_id) {
+      setCustomerId(initialId);
+    }
+  }, [initialId]);
+
+  useEffect(() => {
+    if (locationCustomer) {
+      setCreatedCustomerFallback(locationCustomer);
+      const idToSet = locationCustomer.id || locationCustomer.server_id || locationCustomer.local_id;
+      if (idToSet && idToSet !== customer_id) {
+        setCustomerId(idToSet);
+      }
+    }
+  }, [locationCustomer]);
+
   const { data: customers } = useQuery({
     queryKey: ['customers-all'],
     queryFn: () => fetchCustomers(),
   });
 
-  const selectedCustomer = customers?.find(c => c.id === customer_id);
+  const { data: customerById } = useQuery({
+    queryKey: ['customer', customer_id],
+    queryFn: () => fetchCustomerById(customer_id),
+    enabled: Boolean(customer_id),
+  });
+
+  const selectedCustomer =
+    customers?.find(
+      c =>
+        c.id === customer_id ||
+        (c.local_id && c.local_id === customer_id) ||
+        (c.server_id && c.server_id === customer_id),
+    ) ||
+    customerById ||
+    (createdCustomerFallback &&
+    (createdCustomerFallback.id === customer_id ||
+      createdCustomerFallback.server_id === customer_id ||
+      createdCustomerFallback.local_id === customer_id ||
+      !customer_id)
+      ? createdCustomerFallback
+      : undefined);
   const numericAmount = parseMoney(amount);
   const currentBalance = Number(selectedCustomer?.current_balance ?? 0);
   const creditLimit = Number(selectedCustomer?.credit_limit ?? 0);
@@ -868,8 +911,11 @@ export function NewCreditScreen() {
         onClose={() => setShowNewCustomerModal(false)}
         existingCustomers={customers}
         onCustomerCreated={newCust => {
-          setCustomerId(newCust.id);
+          setCreatedCustomerFallback(newCust);
+          const cid = newCust.id || newCust.server_id || newCust.local_id || '';
+          setCustomerId(cid);
           setCustomerSearch('');
+          setShowNewCustomerModal(false);
         }}
       />
     </div>

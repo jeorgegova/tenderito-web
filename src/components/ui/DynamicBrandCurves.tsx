@@ -184,33 +184,89 @@ function getContainerStyle(pos: CurvePosition): React.CSSProperties {
 function getOuterStyle(pos: CurvePosition): React.CSSProperties {
   switch (pos) {
     case 'top-right':
-      return { top: -15, right: -15, width: 240, height: 185, borderBottomLeftRadius: 135, borderTopLeftRadius: 45, transform: 'rotate(-8deg)' };
+      return {
+        top: -30,
+        right: -25,
+        width: 250,
+        height: 195,
+        borderRadius: '70px 60px 80px 145px',
+        transform: 'rotate(-6deg)',
+      };
     case 'top-left':
-      return { top: -15, left: -15, width: 240, height: 185, borderBottomRightRadius: 135, borderTopRightRadius: 45, transform: 'rotate(8deg)' };
+      return {
+        top: -30,
+        left: -25,
+        width: 250,
+        height: 195,
+        borderRadius: '60px 70px 145px 80px',
+        transform: 'rotate(6deg)',
+      };
     case 'bottom-right':
-      return { bottom: -35, right: -20, width: 220, height: 175, borderTopLeftRadius: 130, borderBottomLeftRadius: 40, transform: 'rotate(8deg)' };
+      return {
+        bottom: -40,
+        right: -25,
+        width: 235,
+        height: 185,
+        borderRadius: '145px 80px 60px 70px',
+        transform: 'rotate(6deg)',
+      };
     case 'bottom-left':
-      return { bottom: -35, left: -20, width: 220, height: 175, borderTopRightRadius: 130, borderBottomRightRadius: 40, transform: 'rotate(-8deg)' };
+      return {
+        bottom: -40,
+        left: -25,
+        width: 235,
+        height: 185,
+        borderRadius: '80px 145px 70px 60px',
+        transform: 'rotate(-6deg)',
+      };
     case 'center-left':
-      return { top: 15, left: -45, width: 175, height: 185, borderTopRightRadius: 110, borderBottomRightRadius: 110, transform: 'rotate(6deg)' };
+      return { top: 15, left: -45, width: 175, height: 185, borderRadius: '0 110px 110px 0', transform: 'rotate(6deg)' };
     case 'center-right':
-      return { top: 15, right: -45, width: 175, height: 185, borderTopLeftRadius: 110, borderBottomLeftRadius: 110, transform: 'rotate(-6deg)' };
+      return { top: 15, right: -45, width: 175, height: 185, borderRadius: '110px 0 0 110px', transform: 'rotate(-6deg)' };
   }
 }
 
 function getInnerStyle(pos: CurvePosition): React.CSSProperties {
   switch (pos) {
     case 'top-right':
-      return { top: -25, right: -20, width: 195, height: 155, borderBottomLeftRadius: 115, borderTopLeftRadius: 35, transform: 'rotate(-6deg)' };
+      return {
+        top: -40,
+        right: -30,
+        width: 205,
+        height: 165,
+        borderRadius: '60px 50px 70px 125px',
+        transform: 'rotate(-4deg)',
+      };
     case 'top-left':
-      return { top: -25, left: -20, width: 195, height: 155, borderBottomRightRadius: 115, borderTopRightRadius: 35, transform: 'rotate(6deg)' };
+      return {
+        top: -40,
+        left: -30,
+        width: 205,
+        height: 165,
+        borderRadius: '50px 60px 125px 70px',
+        transform: 'rotate(4deg)',
+      };
     case 'bottom-right':
-      return { bottom: -45, right: -25, width: 185, height: 145, borderTopLeftRadius: 110, borderBottomLeftRadius: 30, transform: 'rotate(6deg)' };
+      return {
+        bottom: -50,
+        right: -30,
+        width: 195,
+        height: 155,
+        borderRadius: '125px 70px 50px 60px',
+        transform: 'rotate(4deg)',
+      };
     case 'bottom-left':
-      return { bottom: -45, left: -25, width: 185, height: 145, borderTopRightRadius: 110, borderBottomRightRadius: 30, transform: 'rotate(-6deg)' };
+      return {
+        bottom: -50,
+        left: -30,
+        width: 195,
+        height: 155,
+        borderRadius: '70px 125px 60px 50px',
+        transform: 'rotate(-4deg)',
+      };
     case 'center-left':
-      return { top: 30, left: -50, width: 145, height: 155, borderTopRightRadius: 95, borderBottomRightRadius: 95, transform: 'rotate(4deg)' };
+      return { top: 30, left: -50, width: 145, height: 155, borderRadius: '0 95px 95px 0', transform: 'rotate(4deg)' };
     case 'center-right':
-      return { top: 30, right: -50, width: 145, height: 155, borderTopLeftRadius: 95, borderBottomLeftRadius: 95, transform: 'rotate(-4deg)' };
+      return { top: 30, right: -50, width: 145, height: 155, borderRadius: '95px 0 0 95px', transform: 'rotate(-4deg)' };
   }
 }

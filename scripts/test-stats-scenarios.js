@@ -128,17 +128,44 @@ function computeStats({ customers, credits, payments, filters, todayYMD }) {
       status = custPeriodPayments > 0 ? 'abonando' : 'pendiente';
     }
 
+    // Dinero fiado en este período que sigue pendiente hoy
+    let custPeriodPendingCredits = 0;
+    if (bal > 0) {
+      const sorted = [...custCredits].sort((a, b) => {
+        const tA = new Date(a.created_at || '').getTime() || 0;
+        const tB = new Date(b.created_at || '').getTime() || 0;
+        return tB - tA;
+      });
+      let rem = bal;
+      for (const cr of sorted) {
+        if (rem <= 0) break;
+        const amt = Number(cr.amount || 0);
+        const pending = Math.min(amt, rem);
+        rem -= pending;
+        const ymd = toBogotaYMD(cr.created_at);
+        if ((!from || ymd >= from) && (!to || ymd <= to)) {
+          custPeriodPendingCredits += pending;
+        }
+      }
+    }
+
     return {
       customer_id: cust.id,
       name: cust.name,
       current_balance: bal,
       period_credits: custPeriodCredits,
       period_payments: custPeriodPayments,
+      period_pending_credits: custPeriodPendingCredits,
       status,
       debt_days: debtDays,
       oldest_debt_date: oldestDebtDate,
     };
   });
+
+  let periodCreditsPendingTotal = 0;
+  for (const r of rows) {
+    periodCreditsPendingTotal += r.period_pending_credits;
+  }
 
   return {
     currentTotalReceivable,
@@ -146,6 +173,7 @@ function computeStats({ customers, credits, payments, filters, todayYMD }) {
     customersUpToDateCount,
     periodCreditsTotal,
     periodPaymentsTotal,
+    periodCreditsPendingTotal,
     periodCreditsCount,
     periodPaymentsCount,
     rows,
@@ -376,6 +404,46 @@ console.log('--- INICIANDO SUITE DE PRUEBAS PARA ESTADÍSTICAS ---');
   console.log('\nEscenario 15: Cliente sin teléfono');
   const custNoPhone = { id: 'c15', name: 'Sin Teléfono', phone: null, current_balance: 10000 };
   assert('No rompe y el botón WhatsApp se oculta si phone es null', custNoPhone.phone === null);
+}
+
+// 16. Dinero del período que sigue pendiente (FIFO exacto sin fórmulas engañosas)
+{
+  console.log('\nEscenario 16: Dinero del período que sigue pendiente');
+  // Cliente con crédito de octubre ($50.000), crédito de noviembre ($30.000), abono en noviembre ($40.000).
+  // Saldo vivo actual = $40.000.
+  // En noviembre: Fiado = $30.000, Recuperado = $40.000.
+  // El abono de $40.000 amortizó $40.000 del crédito viejo de octubre.
+  // Por lo tanto, el crédito de noviembre ($30.000) sigue 100% pendiente.
+  // La deuda viva está compuesta por $10.000 de octubre + $30.000 de noviembre = $40.000.
+  const cust16 = [{ id: 'c16', name: 'Carlos FIFO', current_balance: 40000, created_at: '2026-10-10' }];
+  const credits16 = [
+    { id: 'cr1', customer_id: 'c16', amount: 50000, created_at: '2026-10-10' },
+    { id: 'cr2', customer_id: 'c16', amount: 30000, created_at: '2026-11-05' },
+  ];
+  const payments16 = [
+    { id: 'pay1', customer_id: 'c16', amount: 40000, payment_date: '2026-11-08' },
+  ];
+
+  const resNov = computeStats({
+    customers: cust16,
+    credits: credits16,
+    payments: payments16,
+    filters: { from: '2026-11-01', to: '2026-11-30' },
+    todayYMD: '2026-11-18',
+  });
+
+  assert('Dinero fiado en noviembre es 30.000', resNov.periodCreditsTotal === 30000);
+  assert('Dinero recuperado en noviembre es 40.000', resNov.periodPaymentsTotal === 40000);
+  assert('Dinero fiado en noviembre que sigue pendiente es 30.000 (no negativo)', resNov.periodCreditsPendingTotal === 30000);
+
+  const resTodo = computeStats({
+    customers: cust16,
+    credits: credits16,
+    payments: payments16,
+    filters: {},
+    todayYMD: '2026-11-18',
+  });
+  assert('En "Todo", lo que sigue pendiente coincide con el saldo vivo actual (40.000)', resTodo.periodCreditsPendingTotal === 40000);
 }
 
 console.log(`\n========================================`);

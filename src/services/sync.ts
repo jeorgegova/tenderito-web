@@ -8,6 +8,7 @@ import {useStore} from '../store/useStore';
 import {notifyCustomerMovement} from './deviceService';
 import {refreshSubscriptionLifecycle} from './portfolio';
 import {getActiveStoreId, clearStoreContext} from './storeContext';
+import {fetchProfile} from './profile';
 
 export {getActiveStoreId, clearStoreContext};
 
@@ -824,20 +825,7 @@ async function pullRemoteData(db: any): Promise<boolean> {
 
     // 6. Actualización no bloqueante del perfil del usuario (usando session local)
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const user = session?.user;
-      if (user) {
-        const { data: profileData } = await withTimeout(
-          supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
-          PULL_TIMEOUT,
-          { data: null, error: null } as any,
-        );
-        if (profileData) {
-          useStore.getState().setProfile(profileData as any);
-        }
-      }
+      await fetchProfile();
     } catch (_profErr) {}
 
     // Marcar descarga inicial completada con éxito

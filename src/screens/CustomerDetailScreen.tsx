@@ -21,6 +21,7 @@ import {
   IoCashOutline,
   IoLogoWhatsapp,
   IoTrashOutline,
+  IoPersonOutline,
 } from 'react-icons/io5';
 import { SyncBadge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -31,6 +32,7 @@ import { StoreHistoryLockNotice } from '../components/ui/StoreHistoryLockNotice'
 import { MagnetFilterBar } from '../components/ui/MagnetFilterBar';
 import { showAlert } from '../components/ui/AlertModal';
 import { fetchCustomerById } from '../services/customers';
+import { fetchProfile } from '../services/profile';
 import { fetchCreditsByCustomer, voidMovement } from '../services/credits';
 import { fetchPaymentsByCustomer } from '../services/payments';
 import { canCreateCreditForCustomer } from '../services/portfolio';
@@ -143,7 +145,13 @@ const generateAvailableMonths = (createdAt?: string | null) => {
 export function CustomerDetailScreen() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const profile = useStore(s => s.profile);
+  const profileFromStore = useStore(s => s.profile);
+  const { data: profileQuery } = useQuery({
+    queryKey: ['profile'],
+    queryFn: fetchProfile,
+    staleTime: 60000,
+  });
+  const profile = profileQuery || profileFromStore;
   const subStatus = calculateSubscriptionStatus(profile);
 
   const [creditEligibility, setCreditEligibility] = useState<CreditEligibility | null>(null);
@@ -336,7 +344,18 @@ export function CustomerDetailScreen() {
     const isCredit = item.kind === 'credit';
     const tipo = isCredit ? 'este fiado' : 'este abono';
 
-    // Validación obligatoria: no dejar cancelar más saldo del que actualmente debe el cliente
+    // 1. Validación de ventana temporal: solo en sus primeras 24 horas de generado
+    const diffHours = (Date.now() - new Date(item.date).getTime()) / (1000 * 60 * 60);
+    if (diffHours > 24) {
+      showAlert({
+        title: 'Tiempo límite superado',
+        message: 'Solo es posible anular movimientos dentro de las primeras 24 horas posteriores a su registro.',
+        type: 'destructive',
+      });
+      return;
+    }
+
+    // 2. Validación obligatoria: no dejar cancelar más saldo del que actualmente debe el cliente
     // para evitar saldos a favor (deuda negativa oculta).
     if (isCredit && item.amount > currentBalance) {
       showAlert({
@@ -446,25 +465,82 @@ export function CustomerDetailScreen() {
           Cliente
         </span>
 
-        {customer.data?.phone ? (
-          <button
-            type="button"
-            onClick={handleShareWhatsApp}
-            title="Compartir saldo por WhatsApp"
-            style={{
-              color: '#25D366',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              padding: 4,
-            }}>
-            <IoLogoWhatsapp size={22} />
-          </button>
-        ) : (
-          <div style={{ width: 28 }} />
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {customer.data?.phone && (
+            <button
+              type="button"
+              onClick={handleShareWhatsApp}
+              title="Compartir saldo por WhatsApp"
+              style={{
+                color: '#25D366',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                padding: 4,
+              }}>
+              <IoLogoWhatsapp size={22} />
+            </button>
+          )}
+
+          {profile?.merchant_name && (
+            <div
+              title={`Sesión iniciada como: ${profile.merchant_name} (Tendero)`}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                backgroundColor: '#FFFFFF',
+                border: `1.5px solid ${Colors.border}`,
+                padding: '4px 10px',
+                borderRadius: 20,
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+                maxWidth: 160,
+              }}>
+              <div
+                style={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: 11,
+                  backgroundColor: Colors.primaryLight,
+                  color: Colors.primary,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}>
+                <IoPersonOutline size={12} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <span
+                  style={{
+                    fontSize: 8,
+                    fontWeight: 800,
+                    color: Colors.primary,
+                    lineHeight: 1,
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5,
+                  }}>
+                  TENDERO
+                </span>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 800,
+                    color: Colors.text,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    lineHeight: 1.2,
+                    marginTop: 1,
+                  }}>
+                  {profile.merchant_name}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Contenido principal scrollable */}
@@ -1151,34 +1227,39 @@ export function CustomerDetailScreen() {
                       justifyContent: 'center',
                       flexShrink: 0,
                     }}>
-                    {!isCancelled && (
-                      <button
-                        type="button"
-                        onClick={() => handleVoidMovement(item)}
-                        title={isCredit ? 'Anular fiado' : 'Anular abono'}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          padding: '6px',
-                          borderRadius: 8,
-                          cursor: 'pointer',
-                          color: Colors.textSecondary,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          transition: 'all 0.15s',
-                        }}
-                        onMouseEnter={e => {
-                          e.currentTarget.style.backgroundColor = '#FEE2E2';
-                          e.currentTarget.style.color = Colors.destructive;
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.backgroundColor = 'transparent';
-                          e.currentTarget.style.color = Colors.textSecondary;
-                        }}>
-                        <IoTrashOutline size={16} />
-                      </button>
-                    )}
+                    {!isCancelled && (() => {
+                      const diffHours = (Date.now() - new Date(item.date).getTime()) / (1000 * 60 * 60);
+                      if (diffHours > 24) return null;
+
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => handleVoidMovement(item)}
+                          title={isCredit ? 'Anular fiado' : 'Anular abono'}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            padding: '6px',
+                            borderRadius: 8,
+                            cursor: 'pointer',
+                            color: Colors.textSecondary,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.15s',
+                          }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.backgroundColor = '#FEE2E2';
+                            e.currentTarget.style.color = Colors.destructive;
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                            e.currentTarget.style.color = Colors.textSecondary;
+                          }}>
+                          <IoTrashOutline size={16} />
+                        </button>
+                      );
+                    })()}
                   </div>
                 </div>
               );

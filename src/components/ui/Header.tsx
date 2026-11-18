@@ -1,17 +1,28 @@
 import React from 'react';
+import { IoPersonOutline } from 'react-icons/io5';
+import { useStore } from '../../store/useStore';
 import { Colors } from '../../theme';
+
+export interface HeaderProps {
+  title: string;
+  subtitle?: string;
+  showCurve?: boolean;
+  rightElement?: React.ReactNode;
+  sessionName?: string;
+  sessionRole?: string;
+}
 
 export function Header({
   title,
   subtitle,
   showCurve = false,
   rightElement,
-}: {
-  title: string;
-  subtitle?: string;
-  showCurve?: boolean;
-  rightElement?: React.ReactNode;
-}) {
+  sessionName,
+  sessionRole,
+}: HeaderProps) {
+  const profile = useStore(s => s.profile);
+  const activeName = sessionName || profile?.merchant_name;
+  const activeRole = sessionRole || (profile ? 'Tendero' : '');
   return (
     <div
       style={{
@@ -125,11 +136,73 @@ export function Header({
             </p>
           )}
         </div>
-        {rightElement && (
+        {rightElement ? (
           <div style={{ marginLeft: 12, alignSelf: 'center', flexShrink: 0 }}>
             {rightElement}
           </div>
-        )}
+        ) : activeName ? (
+          <div
+            title={`Sesión iniciada como: ${activeName}${activeRole ? ` (${activeRole})` : ''}`}
+            style={{
+              marginLeft: 12,
+              alignSelf: 'flex-start',
+              flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              backgroundColor: '#FFFFFF',
+              border: `1.5px solid ${Colors.border}`,
+              padding: '6px 12px',
+              borderRadius: 24,
+              boxShadow: '0 2px 10px rgba(0, 0, 0, 0.05)',
+              maxWidth: 180,
+              position: 'relative',
+              zIndex: 2,
+            }}>
+            <div
+              style={{
+                width: 26,
+                height: 26,
+                borderRadius: 13,
+                backgroundColor: Colors.primaryLight,
+                color: Colors.primary,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}>
+              <IoPersonOutline size={14} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+              {activeRole && (
+                <span
+                  style={{
+                    fontSize: 9,
+                    fontWeight: 800,
+                    color: Colors.primary,
+                    lineHeight: 1,
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5,
+                  }}>
+                  {activeRole}
+                </span>
+              )}
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 800,
+                  color: Colors.text,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  lineHeight: 1.2,
+                  marginTop: activeRole ? 2 : 0,
+                }}>
+                {activeName}
+              </span>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

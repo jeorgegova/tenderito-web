@@ -59,7 +59,7 @@ export function CustomersScreen() {
       }}>
       <DynamicBrandCurves position="top-right" />
 
-      <Header title="Clientes" subtitle="Busca y gestiona tus fiados" showCurve />
+      <Header title="Clientes" subtitle="Busca y gestiona tus fiados" />
 
       {/* Buscador */}
       <div style={{ padding: '4px 20px 8px', position: 'relative', zIndex: 1 }}>

@@ -216,8 +216,10 @@ export function calculateSubscriptionStatus(
   const tEnd = new Date(`${endYMD}T12:00:00-05:00`).getTime();
   const daysDiff = Math.round((tToday - tEnd) / (1000 * 60 * 60 * 24));
 
-  const isDowngradedToFree = isExpired && daysDiff > gracePeriodDays;
-  const inGracePeriod = isExpired && daysDiff <= gracePeriodDays;
+  const statusStr = (profile?.subscription_status || '').toLowerCase();
+  const isExplicitlyActive = statusStr === 'active';
+  const isDowngradedToFree = !isExplicitlyActive && isExpired && daysDiff > gracePeriodDays;
+  const inGracePeriod = !isExplicitlyActive && isExpired && daysDiff <= gracePeriodDays;
   const effectivePlan = isDowngradedToFree ? 'free' : planId;
   const formattedEndDate = formatDateDisplay(endDate);
 

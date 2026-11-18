@@ -24,6 +24,7 @@ import {
   IoDownloadOutline,
   IoNotifications,
   IoNotificationsOutline,
+  IoPersonOutline,
 } from 'react-icons/io5';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -409,10 +410,14 @@ export function CustomerHomeScreen() {
         <div
           style={{
             backgroundColor: Colors.card,
-            padding: '16px 16px 12px',
+            padding: '14px 18px',
             borderBottom: `1px solid ${Colors.border}`,
             position: 'relative',
             zIndex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
           }}>
           <button
             onClick={() => handleSelectStore(null)}
@@ -425,12 +430,71 @@ export function CustomerHomeScreen() {
               borderRadius: 24,
               border: '1px solid #FFEDD5',
               cursor: 'pointer',
+              flexShrink: 0,
             }}>
             <IoArrowBack size={18} color={Colors.primary} />
             <span style={{ fontSize: 14, fontWeight: 800, color: Colors.primary }}>
               Volver a mis tiendas
             </span>
           </button>
+
+          {customerName && (
+            <div
+              title={`Sesión iniciada como: ${customerName} (Cliente)`}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                backgroundColor: '#FFFFFF',
+                border: `1.5px solid ${Colors.border}`,
+                padding: '5px 12px',
+                borderRadius: 24,
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+                maxWidth: 180,
+                flexShrink: 0,
+              }}>
+              <div
+                style={{
+                  width: 24,
+                  height: 24,
+                  borderRadius: 12,
+                  backgroundColor: '#ECFDF5',
+                  color: '#059669',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}>
+                <IoPersonOutline size={13} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <span
+                  style={{
+                    fontSize: 8,
+                    fontWeight: 800,
+                    color: '#059669',
+                    lineHeight: 1,
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5,
+                  }}>
+                  CLIENTE
+                </span>
+                <span
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 800,
+                    color: Colors.text,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    lineHeight: 1.2,
+                    marginTop: 2,
+                  }}>
+                  {customerName}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         <div style={{ position: 'relative', zIndex: 1, padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -1203,8 +1267,24 @@ export function CustomerHomeScreen() {
           zIndex: 1,
         }}>
         <div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: Colors.text }}>
-            ¡Hola, {customerName}!
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 22, fontWeight: 800, color: Colors.text }}>
+              ¡Hola, {customerName}!
+            </span>
+            <span
+              style={{
+                fontSize: 9,
+                fontWeight: 800,
+                color: '#059669',
+                backgroundColor: '#ECFDF5',
+                border: '1px solid #A7F3D0',
+                padding: '2px 8px',
+                borderRadius: 12,
+                textTransform: 'uppercase',
+                letterSpacing: 0.5,
+              }}>
+              Cliente
+            </span>
           </div>
           <div style={{ fontSize: 13, color: Colors.textSecondary, fontWeight: 500, marginTop: 2 }}>
             Tus cuentas en tiendas de barrio
