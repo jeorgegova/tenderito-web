@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { register_fcm_token } from './deviceService';
 import { queryClient } from '../lib/queryClient';
 import { showAlert } from '../utils/alert';
+import { scheduleSync } from './sync';
 
 // Configuración de Firebase Web leída exclusivamente de variables de entorno
 const firebaseConfig = {
@@ -404,6 +405,20 @@ interface RealtimeChannelEntry {
 
 const activeRealtimeChannels = new Map<string, RealtimeChannelEntry>();
 
+function invalidateMovementQueries() {
+  queryClient.invalidateQueries({ queryKey: ['customer-portal'] });
+  queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+  queryClient.invalidateQueries({ queryKey: ['customers'] });
+  queryClient.invalidateQueries({ queryKey: ['customers-all'] });
+  queryClient.invalidateQueries({ queryKey: ['customer'] });
+  queryClient.invalidateQueries({ queryKey: ['credits'] });
+  queryClient.invalidateQueries({ queryKey: ['payments'] });
+  queryClient.invalidateQueries({ queryKey: ['stats'] });
+  queryClient.invalidateQueries({ queryKey: ['total-receivable'] });
+  queryClient.invalidateQueries({ queryKey: ['overdue'] });
+  scheduleSync(300);
+}
+
 /**
  * Hook / inicializador en tiempo real mediante Supabase Realtime
  * Escucha cambios en 'credits', 'payments' y broadcasts directos
@@ -411,17 +426,101 @@ const activeRealtimeChannels = new Map<string, RealtimeChannelEntry>();
  * Implementa conteo de referencias para evitar duplicidad o errores
  * al re-suscribir el mismo canal desde distintos componentes.
  */
-export function setupRealtimeCustomerAlerts(params: string | { userId?: string; customerId?: string }) {
+export function setupRealtimeCustomerAlerts(
+  params: string | { userId?: string; customerId?: string; storeId?: string },
+) {
   const userId = typeof params === 'string' ? params : params?.userId;
   const customerId = typeof params === 'string' ? undefined : params?.customerId;
+  const storeId = typeof params === 'string' ? undefined : params?.storeId;
 
   // Deduplicar identificadores únicos
   const identifiers = Array.from(new Set([userId, customerId].filter(Boolean))) as string[];
-  if (identifiers.length === 0) return () => {};
+  if (identifiers.length === 0 && !storeId) return () => {};
 
-  console.log('[realtime] Conectando canal de notificaciones para:', identifiers);
+  console.log('[realtime] Conectando canal de notificaciones para:', identifiers, 'storeId:', storeId);
 
   const subscribedKeys: string[] = [];
+
+  // Suscripción en tiempo real optimizada para la tienda activa
+  if (storeId) {
+    const storeChannelName = `store-realtime-${storeId}`;
+    const existingStore = activeRealtimeChannels.get(storeChannelName);
+    if (existingStore) {
+      existingStore.refCount += 1;
+      subscribedKeys.push(storeChannelName);
+    } else {
+      try {
+        const orphanChannel = supabase
+          .getChannels()
+          .find(c => c.topic === `realtime:${storeChannelName}` || c.topic === storeChannelName);
+        if (orphanChannel) {
+          try {
+            supabase.removeChannel(orphanChannel);
+          } catch (_remErr) {}
+        }
+
+        const storeCh = supabase
+          .channel(storeChannelName)
+          .on('broadcast', { event: 'movement' }, payload => {
+            console.log('[realtime] Broadcast recibido para tienda:', payload);
+            invalidateMovementQueries();
+          })
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'credits',
+            },
+            payload => {
+              const rec = (payload?.new || payload?.old) as any;
+              if (rec?.store_id && rec.store_id !== storeId) return;
+              console.log('[realtime] Cambio de crédito en tienda detectado:', payload);
+              invalidateMovementQueries();
+            },
+          )
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'payments',
+            },
+            payload => {
+              const rec = (payload?.new || payload?.old) as any;
+              if (rec?.store_id && rec.store_id !== storeId) return;
+              console.log('[realtime] Cambio de abono en tienda detectado:', payload);
+              invalidateMovementQueries();
+            },
+          )
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'customer_stores',
+            },
+            payload => {
+              const rec = (payload?.new || payload?.old) as any;
+              if (rec?.store_id && rec.store_id !== storeId) return;
+              console.log('[realtime] Cambio en clientes de tienda detectado:', payload);
+              invalidateMovementQueries();
+            },
+          );
+
+        storeCh.subscribe((status, err) => {
+          if (err) {
+            console.warn(`[realtime] Error al suscribir canal tienda ${storeChannelName}:`, err);
+          }
+        });
+
+        activeRealtimeChannels.set(storeChannelName, { channel: storeCh, refCount: 1 });
+        subscribedKeys.push(storeChannelName);
+      } catch (err) {
+        console.warn(`[realtime] Error inicializando canal para tienda ${storeId}:`, err);
+      }
+    }
+  }
 
   identifiers.forEach(id => {
     const channelName = `customer-realtime-${id}`;
@@ -464,9 +563,7 @@ export function setupRealtimeCustomerAlerts(params: string | { userId?: string; 
             : `Se registró un fiado de ${formattedAmount}${concept}. Tu saldo ha sido actualizado.`;
 
           showLocalNotification(title, body, data);
-          queryClient.invalidateQueries({ queryKey: ['customer-portal'] });
-          queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-          queryClient.invalidateQueries({ queryKey: ['customers'] });
+          invalidateMovementQueries();
         })
         .on(
           'postgres_changes',
@@ -497,9 +594,7 @@ export function setupRealtimeCustomerAlerts(params: string | { userId?: string; 
               `Se registró un fiado de ${formattedAmount}${concept}. Tu saldo ha sido actualizado.`,
               newRecord,
             );
-            queryClient.invalidateQueries({ queryKey: ['customer-portal'] });
-            queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-            queryClient.invalidateQueries({ queryKey: ['customers'] });
+            invalidateMovementQueries();
           },
         )
         .on(
@@ -530,9 +625,7 @@ export function setupRealtimeCustomerAlerts(params: string | { userId?: string; 
               `Se registró un abono a tu cuenta por ${formattedAmount}. ¡Gracias por tu pago!`,
               newRecord,
             );
-            queryClient.invalidateQueries({ queryKey: ['customer-portal'] });
-            queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-            queryClient.invalidateQueries({ queryKey: ['customers'] });
+            invalidateMovementQueries();
           },
         );
 

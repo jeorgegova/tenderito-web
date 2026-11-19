@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -62,11 +62,15 @@ export function NewPaymentScreen() {
   const remainingBalance = Math.max(0, currentBalance - numericAmount);
   const isTotalPayment = currentBalance > 0 && numericAmount === currentBalance;
 
-  const matchingCustomers = (customers ?? []).filter(c =>
-    `${c.alias ?? ''} ${c.name} ${c.document_number ?? ''}`
-      .toLocaleLowerCase('es-CO')
-      .includes(customerSearch.toLocaleLowerCase('es-CO')),
-  );
+  const matchingCustomers = useMemo(() => {
+    if (!customerSearch.trim()) return customers ?? [];
+    const query = customerSearch.toLocaleLowerCase('es-CO');
+    return (customers ?? []).filter(c =>
+      `${c.alias ?? ''} ${c.name} ${c.document_number ?? ''}`
+        .toLocaleLowerCase('es-CO')
+        .includes(query),
+    );
+  }, [customers, customerSearch]);
 
   const mutation = useMutationWithSync(createPayment, {
     customerId: customer_id,

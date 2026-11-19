@@ -8,6 +8,8 @@ import {
   IoSwapHorizontalOutline,
   IoDownloadOutline,
   IoNotificationsOutline,
+  IoAlertCircle,
+  IoTime,
 } from 'react-icons/io5';
 import { NotificationSettingsModal } from '../components/ui/NotificationSettingsModal';
 import { Button } from '../components/ui/Button';
@@ -224,16 +226,102 @@ export function ProfileScreen() {
                 : subStatus.expiresToday
                 ? `Plan ${subStatus.planId.toUpperCase()} · ¡Vence hoy!`
                 : subStatus.inGracePeriod
-                ? `Plan ${subStatus.planId.toUpperCase()} · Vencido (${Math.max(
-                    0,
-                    10 - subStatus.daysSinceExpiration,
-                  )}d gracia)`
+                ? `Plan ${subStatus.planId.toUpperCase()} · Vencido (${subStatus.remainingGraceDays}d de gracia)`
                 : subStatus.formattedEndDate
                 ? `Plan ${subStatus.planId.toUpperCase()} · Vence ${subStatus.formattedEndDate}`
                 : `Plan ${subStatus.planId.toUpperCase()} · Activo`}
             </span>
           </div>
         </Card>
+
+        {/* Banner informativo de estado de suscripción */}
+        {subStatus.inGracePeriod && (
+          <Card
+            style={{
+              padding: 16,
+              backgroundColor: '#FEF3C7',
+              border: '1.5px solid #F59E0B',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+            }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <IoTime size={22} color="#D97706" style={{ flexShrink: 0 }} />
+              <span style={{ fontSize: 14, fontWeight: 800, color: '#92400E' }}>
+                Tu suscripción {subStatus.planId.toUpperCase()} venció el {subStatus.formattedEndDate}
+              </span>
+            </div>
+            <p style={{ fontSize: 13, color: '#B45309', margin: 0, lineHeight: 1.4 }}>
+              Te quedan <strong>{subStatus.remainingGraceDays} {subStatus.remainingGraceDays === 1 ? 'día de gracia' : 'días de gracia'}</strong> para renovar tu suscripción o pasar a la versión Free conservando tus datos.
+            </p>
+          </Card>
+        )}
+
+        {subStatus.expiresToday && (
+          <Card
+            style={{
+              padding: 16,
+              backgroundColor: '#FEE2E2',
+              border: '1.5px solid #EF4444',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+            }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <IoAlertCircle size={22} color="#DC2626" style={{ flexShrink: 0 }} />
+              <span style={{ fontSize: 14, fontWeight: 800, color: '#991B1B' }}>
+                ¡Tu suscripción {subStatus.planId.toUpperCase()} vence hoy!
+              </span>
+            </div>
+            <p style={{ fontSize: 13, color: '#B91C1C', margin: 0, lineHeight: 1.4 }}>
+              Renueva hoy mismo para evitar entrar en periodo de gracia o interrupciones en tus funciones avanzadas.
+            </p>
+          </Card>
+        )}
+
+        {!subStatus.isExpired && !subStatus.expiresToday && subStatus.remainingDays > 0 && subStatus.remainingDays <= 5 && (
+          <Card
+            style={{
+              padding: 16,
+              backgroundColor: '#FEF3C7',
+              border: '1.5px solid #F59E0B',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+            }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <IoTime size={22} color="#D97706" style={{ flexShrink: 0 }} />
+              <span style={{ fontSize: 14, fontWeight: 800, color: '#92400E' }}>
+                Tu suscripción vencerá pronto
+              </span>
+            </div>
+            <p style={{ fontSize: 13, color: '#B45309', margin: 0, lineHeight: 1.4 }}>
+              Tu plan {subStatus.planId.toUpperCase()} vence el <strong>{subStatus.formattedEndDate}</strong> (te quedan {subStatus.remainingDays} {subStatus.remainingDays === 1 ? 'día' : 'días'}). Renueva a tiempo para no perder tus beneficios.
+            </p>
+          </Card>
+        )}
+
+        {subStatus.isDowngradedToFree && subStatus.planId !== 'free' && (
+          <Card
+            style={{
+              padding: 16,
+              backgroundColor: '#FEE2E2',
+              border: '1.5px solid #EF4444',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+            }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <IoAlertCircle size={22} color="#DC2626" style={{ flexShrink: 0 }} />
+              <span style={{ fontSize: 14, fontWeight: 800, color: '#991B1B' }}>
+                Periodo de gracia finalizado
+              </span>
+            </div>
+            <p style={{ fontSize: 13, color: '#B91C1C', margin: 0, lineHeight: 1.4 }}>
+              Tu suscripción anterior ha vencido y tu cuenta pasó al plan Free. Puedes reactivar tu plan cuando lo desees abajo.
+            </p>
+          </Card>
+        )}
 
         {/* Tiendas asociadas (Multitienda) */}
         {userStores.length > 1 && (

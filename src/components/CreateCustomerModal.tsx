@@ -1,6 +1,16 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { IoClose, IoSearch, IoCheckmarkCircle, IoPersonAdd, IoChevronForward } from 'react-icons/io5';
+import {
+  IoClose,
+  IoSearch,
+  IoCheckmarkCircle,
+  IoPersonAdd,
+  IoChevronForward,
+  IoStorefrontOutline,
+  IoArrowBack,
+  IoWalletOutline,
+  IoCallOutline,
+} from 'react-icons/io5';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/Button';
@@ -12,6 +22,9 @@ import {
   createCustomer,
   findCustomerByDocument,
   linkCustomerToStore,
+  fetchGlobalCustomerHistory,
+  getStoreBalance,
+  getStoreLastMovement,
 } from '../services/customers';
 import { fetchProfile } from '../services/profile';
 import { useStore } from '../store/useStore';
@@ -52,6 +65,12 @@ export function CreateCustomerModal({
   });
   const profile = profileQuery || profileFromStore;
   const subStatus = calculateSubscriptionStatus(profile);
+  const hasProAccess =
+    Boolean(profile?.subscription_plan && profile.subscription_plan.toLowerCase() !== 'free') &&
+    (subStatus.effectivePlan !== 'free' ||
+      subStatus.inGracePeriod ||
+      !subStatus.isDowngradedToFree ||
+      (profile?.subscription_status || '').toLowerCase() === 'active');
 
   const [name, setName] = useState('');
   const [documentType, setDocumentType] = useState('CC');
@@ -64,6 +83,7 @@ export function CreateCustomerModal({
   const [verified, setVerified] = useState(false);
   const [checkingDocument, setCheckingDocument] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [viewingHistory, setViewingHistory] = useState(false);
 
   function resetForm() {
     setName('');
@@ -75,12 +95,35 @@ export function CreateCustomerModal({
     setAlias('');
     setFoundCustomer(null);
     setVerified(false);
+    setViewingHistory(false);
   }
 
   function handleClose() {
     resetForm();
     onClose();
   }
+
+  function handleBackFromHistory() {
+    if (window.history.state?.tenderitoModalSubView === 'customer-history') {
+      window.history.back();
+    } else {
+      setViewingHistory(false);
+    }
+  }
+
+  React.useEffect(() => {
+    if (!viewingHistory) return;
+    const handlePopState = () => {
+      setViewingHistory(false);
+    };
+    try {
+      window.history.pushState({ tenderitoModalSubView: 'customer-history' }, '');
+    } catch (_e) {}
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [viewingHistory]);
 
   const matchedCustomer = React.useMemo(() => {
     const docClean = (documentNumber || '').replace(/[^0-9A-Za-z]/g, '').toUpperCase();
@@ -104,6 +147,28 @@ export function CreateCustomerModal({
   );
   const targetCustomer = matchedCustomer || foundCustomer;
 
+  const targetHistoryId =
+    targetCustomer?.id ||
+    targetCustomer?.server_id ||
+    foundCustomer?.id ||
+    foundCustomer?.server_id ||
+    foundCustomer?.local_id;
+
+  const historyQuery = useQuery({
+    queryKey: ['customer-global-history', targetHistoryId],
+    queryFn: () => fetchGlobalCustomerHistory(targetHistoryId!),
+    enabled: Boolean(viewingHistory && targetHistoryId),
+  });
+
+  const historyStores = historyQuery.data?.stores ?? [];
+  const historyCredits = historyQuery.data?.credits ?? [];
+  const historyPayments = historyQuery.data?.payments ?? [];
+
+  const totalHistoryBalance = historyStores.reduce(
+    (sum: number, s: any) => sum + getStoreBalance(s, historyCredits, historyPayments),
+    0,
+  );
+
   async function onCheckDocument() {
     if (!documentNumber.trim()) {
       return showAlert('Faltan datos', 'Ingresa la identificación del cliente');
@@ -113,6 +178,7 @@ export function CreateCustomerModal({
       const customer = await findCustomerByDocument(documentNumber.trim());
       setFoundCustomer(customer);
       setVerified(true);
+      setViewingHistory(false);
       const docClean = documentNumber.replace(/[^0-9A-Za-z]/g, '').toUpperCase();
       const localMatch = existingCustomers.find(c => {
         const cDocClean = (c.document_number || '').replace(/[^0-9A-Za-z]/g, '').toUpperCase();
@@ -129,16 +195,8 @@ export function CreateCustomerModal({
         if (target.alias) {
           setAlias(target.alias);
         }
-        const alreadyLinked = Boolean(customer?.isLinkedToMyStore || localMatch);
-        if (!alreadyLinked) {
-          showAlert(
-            'Cliente encontrado',
-            'El cliente está registrado en Tenderito. Revisa sus datos y define el cupo de crédito para vincularlo a tu tienda.',
-          );
-        }
       } else {
         setName('');
-        showAlert('Cliente nuevo', 'Completa los datos para registrarlo.');
       }
     } catch (error: any) {
       showAlert('No se pudo verificar', error?.message ?? 'Intenta de nuevo');
@@ -266,43 +324,97 @@ export function CreateCustomerModal({
               flexShrink: 0,
               backgroundColor: '#FFFFFF',
             }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 18,
-                  backgroundColor: Colors.primaryLight,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}>
-                <IoPersonAdd size={18} color={Colors.primary} />
-              </div>
-              <div>
-                <h2 style={{ fontSize: 18, fontWeight: 800, color: Colors.text, margin: 0 }}>
-                  Nuevo cliente
-                </h2>
-                <span style={{ fontSize: 12, color: Colors.textSecondary }}>
-                  Registra un cliente en tu libreta
-                </span>
-              </div>
-            </div>
-            <button
-              onClick={handleClose}
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 16,
-                backgroundColor: '#F1F5F9',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: Colors.textSecondary,
-                cursor: 'pointer',
-              }}>
-              <IoClose size={20} />
-            </button>
+            {viewingHistory ? (
+              <>
+                <button
+                  type="button"
+                  onClick={handleBackFromHistory}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    color: Colors.primary,
+                    fontWeight: 700,
+                    fontSize: 14,
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '6px 10px',
+                    borderRadius: Radius.sm,
+                    backgroundColor: '#FFF7ED',
+                  }}>
+                  <IoArrowBack size={18} />
+                  <span>Volver</span>
+                </button>
+                <div style={{ textAlign: 'center' }}>
+                  <h2 style={{ fontSize: 16, fontWeight: 800, color: Colors.text, margin: 0 }}>
+                    Historial entre tiendas
+                  </h2>
+                  <span style={{ fontSize: 11, color: Colors.textSecondary, fontWeight: 600 }}>
+                    Red Tenderito
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 16,
+                    backgroundColor: '#F1F5F9',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: Colors.textSecondary,
+                    cursor: 'pointer',
+                    border: 'none',
+                  }}>
+                  <IoClose size={20} />
+                </button>
+              </>
+            ) : (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 18,
+                      backgroundColor: Colors.primaryLight,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                    <IoPersonAdd size={18} color={Colors.primary} />
+                  </div>
+                  <div>
+                    <h2 style={{ fontSize: 18, fontWeight: 800, color: Colors.text, margin: 0 }}>
+                      Nuevo cliente
+                    </h2>
+                    <span style={{ fontSize: 12, color: Colors.textSecondary }}>
+                      Registra un cliente en tu libreta
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 16,
+                    backgroundColor: '#F1F5F9',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: Colors.textSecondary,
+                    cursor: 'pointer',
+                    border: 'none',
+                  }}>
+                  <IoClose size={20} />
+                </button>
+              </>
+            )}
           </div>
 
           {/* Scrollable Form Body */}
@@ -317,10 +429,217 @@ export function CreateCustomerModal({
               flexDirection: 'column',
               gap: 16,
             }}>
-          {/* Identificación y tipo */}
+            {viewingHistory ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {/* Cabecera del cliente con datos reales de la red */}
+                <div
+                  style={{
+                    textAlign: 'center',
+                    padding: '16px 14px',
+                    backgroundColor: '#F8FAFC',
+                    borderRadius: Radius.lg,
+                    border: `1px solid ${Colors.border}`,
+                  }}>
+                  <div
+                    style={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: 28,
+                      backgroundColor: Colors.primaryLight,
+                      color: Colors.primary,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 22,
+                      fontWeight: 800,
+                      margin: '0 auto 10px',
+                    }}>
+                    {((targetCustomer?.alias || targetCustomer?.name || foundCustomer?.name || name || 'C') as string)
+                      .charAt(0)
+                      .toUpperCase()}
+                  </div>
+                  <h3 style={{ fontSize: 18, fontWeight: 800, color: Colors.text, margin: 0 }}>
+                    {targetCustomer?.alias || targetCustomer?.name || foundCustomer?.name || name || 'Cliente'}
+                  </h3>
+                  {Boolean(
+                    targetCustomer?.alias &&
+                      (targetCustomer?.name || foundCustomer?.name || name),
+                  ) && (
+                    <div style={{ fontSize: 13, color: Colors.textSecondary, marginTop: 2 }}>
+                      {targetCustomer?.name || foundCustomer?.name || name}
+                    </div>
+                  )}
+                  <div style={{ fontSize: 13, color: Colors.textMuted, marginTop: 4, fontWeight: 600 }}>
+                    {(targetCustomer?.document_type || foundCustomer?.document_type || documentType || 'CC')}{' '}
+                    {(targetCustomer?.document_number || foundCustomer?.document_number || documentNumber)} ·{' '}
+                    {(targetCustomer?.phone || foundCustomer?.phone || phone || 'Sin teléfono')}
+                  </div>
+                </div>
+
+                {/* Resumen total de deuda entre tiendas */}
+                <div
+                  style={{
+                    padding: 16,
+                    borderRadius: Radius.lg,
+                    backgroundColor: Colors.primaryLight,
+                    border: `1.5px solid ${Colors.primaryMid}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 14,
+                  }}>
+                  <div
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 22,
+                      backgroundColor: '#FFFFFF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: Colors.primary,
+                      flexShrink: 0,
+                    }}>
+                    <IoWalletOutline size={22} />
+                  </div>
+                  <div>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 800,
+                        letterSpacing: 0.8,
+                        color: Colors.primaryDark,
+                      }}>
+                      DEUDA TOTAL EN TODAS LAS TIENDAS
+                    </div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: Colors.primaryDark, marginTop: 2 }}>
+                      {formatCOP(totalHistoryBalance)}
+                    </div>
+                  </div>
+                </div>
+
+                <h4 style={{ fontSize: 15, fontWeight: 800, color: Colors.text, margin: '4px 0 0' }}>
+                  Tiendas vinculadas
+                </h4>
+
+                {historyQuery.isLoading ? (
+                  <div
+                    style={{
+                      textAlign: 'center',
+                      padding: '24px 16px',
+                      backgroundColor: '#F8FAFC',
+                      borderRadius: Radius.md,
+                      border: `1px solid ${Colors.border}`,
+                    }}>
+                    <span style={{ fontSize: 13, color: Colors.textSecondary }}>Cargando historial…</span>
+                  </div>
+                ) : historyStores.length === 0 ? (
+                  <div
+                    style={{
+                      textAlign: 'center',
+                      padding: '24px 16px',
+                      backgroundColor: '#F8FAFC',
+                      borderRadius: Radius.md,
+                      border: `1px solid ${Colors.border}`,
+                    }}>
+                    <span style={{ fontSize: 13, color: Colors.textSecondary }}>
+                      No hay otras tiendas registradas con este cliente.
+                    </span>
+                  </div>
+                ) : (
+                  historyStores.map((s: any) => {
+                    const bal = getStoreBalance(s, historyCredits, historyPayments);
+                    const isOwing = bal > 0;
+                    const lastMov = getStoreLastMovement(s, historyCredits, historyPayments);
+                    return (
+                      <div
+                        key={s.store_id}
+                        style={{
+                          padding: 14,
+                          backgroundColor: '#FFFFFF',
+                          borderRadius: Radius.md,
+                          border: `1px solid ${Colors.border}`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: 12,
+                        }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div
+                            style={{
+                              width: 38,
+                              height: 38,
+                              borderRadius: 19,
+                              backgroundColor: '#F1F5F9',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: Colors.textSecondary,
+                              flexShrink: 0,
+                            }}>
+                            <IoStorefrontOutline size={18} />
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: Colors.text }}>
+                              {s.store_name}
+                            </div>
+                            {s.phone && (
+                              <div
+                                style={{
+                                  fontSize: 12,
+                                  color: Colors.textSecondary,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 4,
+                                  marginTop: 1,
+                                }}>
+                                <IoCallOutline size={12} color={Colors.primary} />
+                                <a
+                                  href={`tel:${s.phone}`}
+                                  onClick={e => e.stopPropagation()}
+                                  style={{
+                                    color: Colors.primary,
+                                    textDecoration: 'none',
+                                    fontWeight: 600,
+                                  }}>
+                                  {s.phone}
+                                </a>
+                              </div>
+                            )}
+                            <div style={{ fontSize: 12, color: Colors.textMuted, marginTop: 1 }}>
+                              Último movimiento: {lastMov}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                          <div
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 800,
+                              color: isOwing ? Colors.destructive : Colors.success,
+                            }}>
+                            {isOwing ? 'DEBE' : 'AL DÍA'}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 14,
+                              fontWeight: 800,
+                              color: isOwing ? Colors.text : Colors.success,
+                            }}>
+                            {formatCOP(bal)}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            ) : (
+              <>
+          {/* Identificación y tipo con botón de buscar dentro del input */}
           <div style={{ display: 'flex', gap: 8 }}>
-            <div style={{ width: 110 }}>
-              <label style={{ fontSize: 13, fontWeight: 700, color: Colors.textSecondary }}>
+            <div style={{ width: 105, flexShrink: 0 }}>
+              <label style={{ fontSize: 13, fontWeight: 700, color: Colors.textSecondary, display: 'block' }}>
                 Tipo
               </label>
               <select
@@ -348,7 +667,7 @@ export function CreateCustomerModal({
                 ))}
               </select>
             </div>
-            <div style={{ flex: 1 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
               <Input
                 label="Número de documento *"
                 value={documentNumber}
@@ -369,17 +688,56 @@ export function CreateCustomerModal({
                   }
                 }}
                 placeholder="Ej. 10203040"
+                trailingElement={
+                  <button
+                    type="button"
+                    onClick={onCheckDocument}
+                    disabled={checkingDocument || !documentNumber.trim()}
+                    title="Buscar en Tenderito"
+                    aria-label="Buscar en Tenderito"
+                    style={{
+                      height: 34,
+                      padding: '0 12px',
+                      borderRadius: Radius.sm,
+                      backgroundColor:
+                        !documentNumber.trim() || checkingDocument
+                          ? '#FFF1E5'
+                          : Colors.primary,
+                      border: `1px solid ${
+                        !documentNumber.trim() || checkingDocument
+                          ? Colors.primaryMid
+                          : Colors.primary
+                      }`,
+                      color:
+                        !documentNumber.trim() || checkingDocument
+                          ? Colors.primary
+                          : '#FFFFFF',
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 5,
+                      cursor:
+                        !documentNumber.trim() || checkingDocument
+                          ? 'not-allowed'
+                          : 'pointer',
+                      opacity: checkingDocument || !documentNumber.trim() ? 0.65 : 1,
+                      transition: 'all 0.15s ease',
+                      boxShadow:
+                        !documentNumber.trim() || checkingDocument
+                          ? 'none'
+                          : '0 2px 4px rgba(255, 107, 0, 0.2)',
+                      outline: 'none',
+                      whiteSpace: 'nowrap',
+                    }}>
+                    <IoSearch size={15} className={checkingDocument ? 'spin' : ''} />
+                    <span>Buscar</span>
+                  </button>
+                }
               />
             </div>
           </div>
-
-          <Button
-            title={checkingDocument ? 'Verificando…' : 'Buscar en Tenderito'}
-            variant="secondary"
-            disabled={checkingDocument || !documentNumber.trim()}
-            onPress={onCheckDocument}
-            icon={<IoSearch size={18} />}
-          />
 
           {verified && (
             <div
@@ -484,7 +842,48 @@ export function CreateCustomerModal({
                       </div>
                     </div>
 
-                    {subStatus.effectivePlan === 'free' && (
+                    {hasProAccess ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setViewingHistory(true);
+                        }}
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 8,
+                          backgroundColor: '#FFF7ED',
+                          border: `1.5px solid ${Colors.primaryMid}`,
+                          padding: '10px 14px',
+                          borderRadius: Radius.md,
+                          cursor: 'pointer',
+                          width: '100%',
+                          boxSizing: 'border-box',
+                          transition: 'all 0.15s ease',
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.backgroundColor = '#FFEDD5';
+                          e.currentTarget.style.borderColor = Colors.primary;
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.backgroundColor = '#FFF7ED';
+                          e.currentTarget.style.borderColor = Colors.primaryMid;
+                        }}>
+                        <IoStorefrontOutline size={16} color={Colors.primary} />
+                        <span
+                          style={{
+                            flex: 1,
+                            fontSize: 13,
+                            fontWeight: 700,
+                            color: Colors.primary,
+                            textAlign: 'left',
+                          }}>
+                          Ver historial entre tiendas
+                        </span>
+                        <IoChevronForward size={14} color={Colors.primary} />
+                      </button>
+                    ) : (
                       <StoreHistoryLockNotice
                         text="El historial crediticio entre tiendas está activo en planes pagos."
                       />
@@ -523,7 +922,7 @@ export function CreateCustomerModal({
                   </>
                 ) : (
                   <>
-                  {subStatus.effectivePlan === 'free' && (
+                  {!hasProAccess && (
                     <StoreHistoryLockNotice
                       text="El historial crediticio entre tiendas está activo en planes pagos."
                     />
@@ -561,6 +960,8 @@ export function CreateCustomerModal({
               )}
             </div>
           )}
+          </>
+          )}
         </div>
 
         {/* Footer actions */}
@@ -575,7 +976,16 @@ export function CreateCustomerModal({
             position: 'relative',
             zIndex: 10,
           }}>
-          {verified && isAlreadyLinked && targetCustomer ? (
+          {viewingHistory ? (
+            <div style={{ display: 'flex', width: '100%', gap: 10 }}>
+              <Button
+                title="Volver y usar este cliente"
+                variant="primary"
+                style={{ flex: 1 }}
+                onPress={handleBackFromHistory}
+              />
+            </div>
+          ) : verified && isAlreadyLinked && targetCustomer ? (
             <>
               <Button
                 title="Cerrar"

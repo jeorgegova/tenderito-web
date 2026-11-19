@@ -1,30 +1,32 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { IoArrowBack, IoWalletOutline, IoStorefrontOutline } from 'react-icons/io5';
+import {
+  IoArrowBack,
+  IoWalletOutline,
+  IoStorefrontOutline,
+  IoCallOutline,
+} from 'react-icons/io5';
 import { Card } from '../components/ui/Card';
-import { fetchGlobalCustomerHistory, fetchCustomerById } from '../services/customers';
+import {
+  fetchGlobalCustomerHistory,
+  fetchCustomerById,
+  getStoreBalance,
+  getStoreLastMovement,
+} from '../services/customers';
 import { Colors, formatCOP } from '../theme';
-import { formatDateDisplay } from '../utils/format';
 import { DynamicBrandCurves } from '../components/ui/DynamicBrandCurves';
-
-function formatLastMovement(lastMovement?: string | null): string {
-  if (!lastMovement) return 'Sin movimientos';
-  const str = String(lastMovement).trim().toLowerCase();
-  if (str.includes('infinity') || str === 'null' || str === '' || str === 'undefined') {
-    return 'Sin movimientos';
-  }
-  const formatted = formatDateDisplay(lastMovement);
-  return formatted && formatted !== 'Sin fecha' ? formatted : 'Sin movimientos';
-}
 
 export function CustomerHistoryScreen() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const initialCustomer = (location.state as any)?.customer;
 
   const customer = useQuery({
     queryKey: ['customer', id],
     queryFn: () => fetchCustomerById(id!),
     enabled: Boolean(id),
+    initialData: initialCustomer,
   });
 
   const history = useQuery({
@@ -34,15 +36,21 @@ export function CustomerHistoryScreen() {
   });
 
   const stores = history.data?.stores ?? [];
+  const credits = history.data?.credits ?? [];
+  const payments = history.data?.payments ?? [];
+
   const totalBalance = stores.reduce(
-    (sum: number, s: any) => sum + Number(s.current_balance ?? 0),
+    (sum: number, s: any) => sum + getStoreBalance(s, credits, payments),
     0,
   );
 
-  const customerData = customer.data;
-  const displayName = customerData?.alias || customerData?.name || 'Cliente';
+  const customerData = customer.data || initialCustomer || (history.data as any)?.customer;
+  const displayName = customerData?.alias || customerData?.name || (customer.isLoading ? 'Cargando…' : 'Cliente');
   const realName = customerData?.alias && customerData?.name ? customerData.name : null;
   const phone = customerData?.phone ?? 'Sin teléfono';
+  const documentInfo = customerData?.document_number
+    ? `${customerData.document_type || 'CC'} ${customerData.document_number}`
+    : null;
 
   return (
     <div
@@ -128,7 +136,7 @@ export function CustomerHistoryScreen() {
             </div>
           )}
           <div style={{ fontSize: 13, color: Colors.textMuted, marginTop: 2 }}>
-            {phone}
+            {documentInfo ? `${documentInfo} · ${phone}` : phone}
           </div>
         </div>
 
@@ -188,8 +196,9 @@ export function CustomerHistoryScreen() {
           </Card>
         ) : (
           stores.map((s: any) => {
-            const bal = Number(s.current_balance ?? 0);
+            const bal = getStoreBalance(s, credits, payments);
             const isOwing = bal > 0;
+            const lastMov = getStoreLastMovement(s, credits, payments);
             return (
               <Card
                 key={s.store_id}
@@ -217,8 +226,31 @@ export function CustomerHistoryScreen() {
                     <div style={{ fontSize: 15, fontWeight: 700, color: Colors.text }}>
                       {s.store_name}
                     </div>
-                    <div style={{ fontSize: 12, color: Colors.textMuted }}>
-                      Último movimiento: {formatLastMovement(s.last_movement)}
+                    {s.phone && (
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: Colors.textSecondary,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          marginTop: 1,
+                        }}>
+                        <IoCallOutline size={12} color={Colors.primary} />
+                        <a
+                          href={`tel:${s.phone}`}
+                          onClick={e => e.stopPropagation()}
+                          style={{
+                            color: Colors.primary,
+                            textDecoration: 'none',
+                            fontWeight: 600,
+                          }}>
+                          {s.phone}
+                        </a>
+                      </div>
+                    )}
+                    <div style={{ fontSize: 12, color: Colors.textMuted, marginTop: 1 }}>
+                      Último movimiento: {lastMov}
                     </div>
                   </div>
                 </div>

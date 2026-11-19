@@ -115,6 +115,7 @@ export interface SubscriptionStatusInfo {
   isExpired: boolean;
   daysSinceExpiration: number;
   remainingDays: number;
+  remainingGraceDays: number;
   inGracePeriod: boolean;
   isDowngradedToFree: boolean;
   needsRenewal: boolean;
@@ -147,6 +148,7 @@ export function calculateSubscriptionStatus(
       isExpired: false,
       daysSinceExpiration: 0,
       remainingDays: 0,
+      remainingGraceDays: 0,
       inGracePeriod: false,
       isDowngradedToFree: false,
       needsRenewal: false,
@@ -167,6 +169,7 @@ export function calculateSubscriptionStatus(
       isExpired: false,
       daysSinceExpiration: 0,
       remainingDays: 0,
+      remainingGraceDays: 0,
       inGracePeriod: false,
       isDowngradedToFree: false,
       needsRenewal: false,
@@ -187,6 +190,7 @@ export function calculateSubscriptionStatus(
       isExpired: false,
       daysSinceExpiration: 0,
       remainingDays: 0,
+      remainingGraceDays: 0,
       inGracePeriod: false,
       isDowngradedToFree: false,
       needsRenewal: false,
@@ -217,10 +221,11 @@ export function calculateSubscriptionStatus(
   const daysDiff = Math.round((tToday - tEnd) / (1000 * 60 * 60 * 24));
 
   const statusStr = (profile?.subscription_status || '').toLowerCase();
-  const isExplicitlyActive = statusStr === 'active';
-  const isDowngradedToFree = !isExplicitlyActive && isExpired && daysDiff > gracePeriodDays;
-  const inGracePeriod = !isExplicitlyActive && isExpired && daysDiff <= gracePeriodDays;
+  const isCancelled = statusStr === 'cancelled';
+  const isDowngradedToFree = isCancelled || (isExpired && daysDiff > gracePeriodDays);
+  const inGracePeriod = !isCancelled && isExpired && daysDiff <= gracePeriodDays;
   const effectivePlan = isDowngradedToFree ? 'free' : planId;
+  const remainingGraceDays = inGracePeriod ? Math.max(0, gracePeriodDays - daysDiff) : 0;
   const formattedEndDate = formatDateDisplay(endDate);
 
   return {
@@ -233,6 +238,7 @@ export function calculateSubscriptionStatus(
     isExpired,
     daysSinceExpiration: Math.max(0, daysDiff),
     remainingDays: isExpired ? 0 : Math.max(0, -daysDiff),
+    remainingGraceDays,
     inGracePeriod,
     isDowngradedToFree,
     needsRenewal: expiresToday || isExpired,

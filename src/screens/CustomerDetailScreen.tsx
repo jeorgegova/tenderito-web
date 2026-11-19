@@ -153,6 +153,12 @@ export function CustomerDetailScreen() {
   });
   const profile = profileQuery || profileFromStore;
   const subStatus = calculateSubscriptionStatus(profile);
+  const hasProAccess =
+    Boolean(profile?.subscription_plan && profile.subscription_plan.toLowerCase() !== 'free') &&
+    (subStatus.effectivePlan !== 'free' ||
+      subStatus.inGracePeriod ||
+      !subStatus.isDowngradedToFree ||
+      (profile?.subscription_status || '').toLowerCase() === 'active');
 
   const [creditEligibility, setCreditEligibility] = useState<CreditEligibility | null>(null);
   const [filterType, setFilterType] = useState<'all' | 'credit' | 'payment'>('all');
@@ -665,10 +671,14 @@ export function CustomerDetailScreen() {
           ) : null}
 
           {/* Historial en otras tiendas (si aplica plan de pago) */}
-          {subStatus.effectivePlan !== 'free' ? (
+          {hasProAccess ? (
             <button
               type="button"
-              onClick={() => navigate(`/customers/${id}/history`)}
+              onClick={() =>
+                navigate(`/customers/${id}/history`, {
+                  state: { customer: customer.data },
+                })
+              }
               style={{
                 display: 'flex',
                 flexDirection: 'row',

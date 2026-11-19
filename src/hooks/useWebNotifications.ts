@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { setupWebPushNotifications, setupRealtimeCustomerAlerts } from '../services/notificationService';
 import { syncPendingDeviceToken } from '../services/deviceService';
+import { getActiveStoreId } from '../services/storeContext';
 
 export function useWebNotifications() {
   useEffect(() => {
@@ -14,7 +15,7 @@ export function useWebNotifications() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (
         session?.user &&
         (event === 'SIGNED_IN' ||
@@ -28,11 +29,13 @@ export function useWebNotifications() {
           cleanupRealtime?.();
           const userId = session.user.id;
           const metaCustId = session.user.user_metadata?.customer_id;
+          const activeStoreId = await getActiveStoreId();
 
-          // Vincular de inmediato con lo conocido
+          // Vincular de inmediato con lo conocido (incluyendo tienda si es tendero)
           cleanupRealtime = setupRealtimeCustomerAlerts({
             userId,
             customerId: metaCustId,
+            storeId: activeStoreId || undefined,
           });
 
           // Obtener customer_id de la tabla si no está en metadata
@@ -47,6 +50,7 @@ export function useWebNotifications() {
                 cleanupRealtime = setupRealtimeCustomerAlerts({
                   userId,
                   customerId: cust.id,
+                  storeId: activeStoreId || undefined,
                 });
               }
             });

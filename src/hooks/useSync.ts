@@ -1,46 +1,77 @@
 import { useEffect, useState, useCallback } from 'react';
 import NetInfo from '../lib/netInfo';
 import { useQueryClient } from '@tanstack/react-query';
-import { syncAll, clearCachedStoreId } from '../services/sync';
+import {
+  syncAll,
+  clearCachedStoreId,
+  isSyncing as getIsSyncing,
+  subscribeSyncStatus,
+  onSyncComplete,
+} from '../services/sync';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 
 export function useSync() {
   const { isAuthenticated, userType } = useAuth();
-  const [isSyncing, setIsSyncing] = useState(false);
+  const [isSyncing, setIsSyncing] = useState<boolean>(getIsSyncing());
   const [isOnline, setIsOnline] = useState<boolean | null>(true);
   const [lastSyncDate, setLastSyncDate] = useState<Date | null>(null);
   const queryClient = useQueryClient();
 
+  // Suscripción al estado global de sincronización para reactividad inmediata
+  useEffect(() => {
+    return subscribeSyncStatus(setIsSyncing);
+  }, []);
+
+  const invalidateDomainQueries = useCallback(async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['customers'] }),
+      queryClient.invalidateQueries({ queryKey: ['customers-all'] }),
+      queryClient.invalidateQueries({ queryKey: ['customer'] }),
+      queryClient.invalidateQueries({ queryKey: ['credits'] }),
+      queryClient.invalidateQueries({ queryKey: ['payments'] }),
+      queryClient.invalidateQueries({ queryKey: ['stats'] }),
+      queryClient.invalidateQueries({ queryKey: ['total-receivable'] }),
+      queryClient.invalidateQueries({ queryKey: ['overdue'] }),
+      queryClient.invalidateQueries({ queryKey: ['free-portfolio'] }),
+      queryClient.invalidateQueries({ queryKey: ['profile'] }),
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
+      queryClient.invalidateQueries({ queryKey: ['customer-portal'] }),
+    ]);
+  }, [queryClient]);
+
+  // Invalidar consultas tan pronto como cualquier sincronización (automática o debounced) complete
+  useEffect(() => {
+    return onSyncComplete(async ({ pushed, pulled }) => {
+      if (pushed || pulled) {
+        await invalidateDomainQueries();
+      }
+    });
+  }, [invalidateDomainQueries]);
+
   const runSync = useCallback(
     async (options?: { force?: boolean }) => {
-      if (isSyncing || !isAuthenticated || userType !== 'store') {
+      if (getIsSyncing() || !isAuthenticated || userType !== 'store') {
         return;
       }
       try {
-        setIsSyncing(true);
         const { pushed, pulled } = await syncAll(options);
         setLastSyncDate(new Date());
 
-        await queryClient.invalidateQueries({ queryKey: ['free-portfolio'] });
-        await queryClient.invalidateQueries({ queryKey: ['profile'] });
-
-        if (pushed || pulled) {
+        // Si fue forzada por el usuario o hubo movimientos reales, refrescar de inmediato
+        if (options?.force || pushed || pulled) {
+          await invalidateDomainQueries();
+        } else {
           await Promise.all([
-            queryClient.invalidateQueries({ queryKey: ['customers'] }),
-            queryClient.invalidateQueries({ queryKey: ['total-receivable'] }),
-            queryClient.invalidateQueries({ queryKey: ['overdue'] }),
             queryClient.invalidateQueries({ queryKey: ['free-portfolio'] }),
             queryClient.invalidateQueries({ queryKey: ['profile'] }),
           ]);
         }
       } catch (e) {
         console.warn('Error durante sincronización:', e);
-      } finally {
-        setIsSyncing(false);
       }
     },
-    [isSyncing, isAuthenticated, userType, queryClient],
+    [isAuthenticated, userType, invalidateDomainQueries, queryClient],
   );
 
   useEffect(() => {

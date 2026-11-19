@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -130,11 +130,15 @@ export function NewCreditScreen() {
     };
   }, [customer_id, profile, customers]);
 
-  const matchingCustomers = (customers ?? []).filter(c =>
-    `${c.alias ?? ''} ${c.name} ${c.document_number ?? ''}`
-      .toLocaleLowerCase('es-CO')
-      .includes(customerSearch.toLocaleLowerCase('es-CO')),
-  );
+  const matchingCustomers = useMemo(() => {
+    if (!customerSearch.trim()) return customers ?? [];
+    const query = customerSearch.toLocaleLowerCase('es-CO');
+    return (customers ?? []).filter(c =>
+      `${c.alias ?? ''} ${c.name} ${c.document_number ?? ''}`
+        .toLocaleLowerCase('es-CO')
+        .includes(query),
+    );
+  }, [customers, customerSearch]);
 
   const mutation = useMutationWithSync(createCredit, {
     onSuccess: () => navigate(-1),

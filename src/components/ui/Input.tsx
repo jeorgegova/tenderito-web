@@ -15,6 +15,7 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   error?: string;
   leadingIcon?: string | React.ReactNode;
   trailingIcon?: string | React.ReactNode;
+  trailingElement?: React.ReactNode;
   onTrailingPress?: () => void;
   pill?: boolean;
 }
@@ -25,6 +26,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(function Inp
     error,
     leadingIcon,
     trailingIcon,
+    trailingElement,
     onTrailingPress,
     pill,
     type = 'text',
@@ -183,7 +185,13 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(function Inp
           {...rest}
         />
 
-        {renderTrailingIcon()}
+        {trailingElement ? (
+          <div style={{ marginLeft: 8, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+            {trailingElement}
+          </div>
+        ) : (
+          renderTrailingIcon()
+        )}
       </div>
       {error && (
         <span style={{ fontSize: 12, color: Colors.destructive, fontWeight: 600 }}>

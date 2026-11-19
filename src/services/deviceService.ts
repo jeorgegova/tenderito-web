@@ -285,6 +285,26 @@ export async function notifyCustomerMovement(params: {
           });
         }
       });
+
+      if (params.storeId) {
+        const storeBcChannel = supabase.channel(`store-realtime-${params.storeId}`);
+        storeBcChannel.subscribe(status => {
+          if (status === 'SUBSCRIBED') {
+            storeBcChannel.send({
+              type: 'broadcast',
+              event: 'movement',
+              payload: {
+                type: params.type,
+                status: params.status || 'active',
+                amount: params.amount,
+                concept: params.concept,
+                storeId: params.storeId,
+                movementId: params.movementId,
+              },
+            });
+          }
+        });
+      }
     } catch (bcErr) {
       console.warn('[notifyCustomerMovement] Broadcast en realtime omitido:', bcErr);
     }
