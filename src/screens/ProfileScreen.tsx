@@ -10,8 +10,10 @@ import {
   IoNotificationsOutline,
   IoAlertCircle,
   IoTime,
+  IoPencilOutline,
 } from 'react-icons/io5';
 import { NotificationSettingsModal } from '../components/ui/NotificationSettingsModal';
+import { EditStoreModal } from '../components/ui/EditStoreModal';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Header } from '../components/ui/Header';
@@ -39,6 +41,7 @@ import { fetchProfile } from '../services/profile';
 
 export function ProfileScreen() {
   const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
+  const [isEditStoreOpen, setIsEditStoreOpen] = useState(false);
   const setProfile = useStore(s => s.setProfile);
   const queryClient = useQueryClient();
 
@@ -183,7 +186,30 @@ export function ProfileScreen() {
           </h2>
           <div style={{ fontSize: 13, color: Colors.textSecondary, marginTop: 4 }}>
             {(data as any)?.merchant_name ?? ''}
+            {(data as any)?.phone ? ` · Tel: ${(data as any).phone}` : ''}
           </div>
+
+          <button
+            type="button"
+            onClick={() => setIsEditStoreOpen(true)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              marginTop: 10,
+              padding: '6px 14px',
+              borderRadius: 20,
+              backgroundColor: '#F8FAFC',
+              border: `1.5px solid ${Colors.border}`,
+              color: Colors.text,
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: 'pointer',
+              transition: 'all 0.15s',
+            }}>
+            <IoPencilOutline size={14} color={Colors.primary} />
+            <span>Editar datos de la tienda</span>
+          </button>
 
           <div
             style={{
@@ -603,6 +629,24 @@ export function ProfileScreen() {
         <NotificationSettingsModal
           isOpen={isNotifModalOpen}
           onClose={() => setIsNotifModalOpen(false)}
+        />
+
+        {/* Modal de edición de datos de la tienda */}
+        <EditStoreModal
+          visible={isEditStoreOpen}
+          onClose={() => setIsEditStoreOpen(false)}
+          initialStoreName={(data as any)?.store_name || ''}
+          initialPhone={(data as any)?.phone || ''}
+          initialMerchantName={(data as any)?.merchant_name || ''}
+          initialAddress={(data as any)?.address || ''}
+          onSaved={async () => {
+            await refetchProfile();
+            await refetchStores();
+            await refetchActiveStore();
+            queryClient.invalidateQueries({ queryKey: ['profile'] });
+            queryClient.invalidateQueries({ queryKey: ['user-stores'] });
+            queryClient.invalidateQueries({ queryKey: ['active-store'] });
+          }}
         />
       </div>
     </div>

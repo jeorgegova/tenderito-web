@@ -22,6 +22,7 @@ import { Header } from '../components/ui/Header';
 import { DynamicBrandCurves } from '../components/ui/DynamicBrandCurves';
 import { fetchOverdueCredits, fetchTotalReceivable } from '../services/credits';
 import { fetchCustomers } from '../services/customers';
+import { fetchProfile } from '../services/profile';
 import { Colors, formatCOP } from '../theme';
 import { formatDateDisplay } from '../utils/format';
 import { AnimatedMoney } from '../components/ui/AnimatedMoney';
@@ -33,7 +34,12 @@ import { MagnetTabBar } from '../components/ui/MagnetTabBar';
 export function DashboardScreen() {
   const navigate = useNavigate();
   const [showBalance, setShowBalance] = useState(true);
-  const profile = useStore(s => s.profile);
+  const storeProfile = useStore(s => s.profile);
+  const profileQuery = useQuery({
+    queryKey: ['profile'],
+    queryFn: fetchProfile,
+  });
+  const profile = profileQuery.data ?? storeProfile;
   const subStatus = calculateSubscriptionStatus(profile);
 
   const total = useQuery({
@@ -79,6 +85,12 @@ export function DashboardScreen() {
         subtitle={
           subStatus.isLifetime
             ? 'Plan Free · Vitalicio'
+            : subStatus.expiresToday
+            ? `Plan ${subStatus.planId.toUpperCase()} · ¡Vence hoy!`
+            : subStatus.inGracePeriod
+            ? `Plan ${subStatus.planId.toUpperCase()} · Vencido (${subStatus.remainingGraceDays}d de gracia)`
+            : subStatus.formattedEndDate
+            ? `Plan ${subStatus.planId.toUpperCase()} · Vence ${subStatus.formattedEndDate}`
             : `Plan ${(profile?.subscription_plan || 'free').toUpperCase()}`
         }
         showCurve

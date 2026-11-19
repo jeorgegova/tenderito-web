@@ -22,7 +22,9 @@ import {
   IoLogoWhatsapp,
   IoTrashOutline,
   IoPersonOutline,
+  IoPencilOutline,
 } from 'react-icons/io5';
+import { EditCustomerAliasLimitModal } from '../components/ui/EditCustomerAliasLimitModal';
 import { SyncBadge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
@@ -166,6 +168,7 @@ export function CustomerDetailScreen() {
   const [isMonthModalVisible, setIsMonthModalVisible] = useState(false);
   const [searchConcept, setSearchConcept] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isEditAliasLimitOpen, setIsEditAliasLimitOpen] = useState(false);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -424,6 +427,7 @@ export function CustomerDetailScreen() {
 
   return (
     <div
+      className="fade-in"
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -600,7 +604,7 @@ export function CustomerDetailScreen() {
             </div>
 
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                 <span
                   style={{
                     fontSize: 19,
@@ -637,6 +641,27 @@ export function CustomerDetailScreen() {
                 {customer.data?.document_number || 'Sin cédula'}
               </div>
             </div>
+
+            <button
+              type="button"
+              onClick={() => setIsEditAliasLimitOpen(true)}
+              title="Editar alias y tope de crédito"
+              style={{
+                background: '#FFF7ED',
+                border: '1px solid #FED7AA',
+                cursor: 'pointer',
+                padding: '8px 10px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: Colors.primary,
+                borderRadius: 10,
+                flexShrink: 0,
+                alignSelf: 'center',
+                transition: 'all 0.15s',
+              }}>
+              <IoPencilOutline size={18} />
+            </button>
           </div>
 
           {/* Botón rápido para llamar al cliente */}
@@ -1036,6 +1061,8 @@ export function CustomerDetailScreen() {
               VALOR
             </span>
           </div>
+          {/* Espacio para alinear con la columna de anular */}
+          <div style={{ width: 32, flexShrink: 0 }} />
         </div>
 
         {/* ── Filas de la Tabla ── */}
@@ -1230,8 +1257,7 @@ export function CustomerDetailScreen() {
                   {/* Botón Anular Movimiento */}
                   <div
                     style={{
-                      marginLeft: 6,
-                      width: 28,
+                      width: 32,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -1249,8 +1275,10 @@ export function CustomerDetailScreen() {
                           style={{
                             background: 'none',
                             border: 'none',
-                            padding: '6px',
-                            borderRadius: 8,
+                            width: 28,
+                            height: 28,
+                            padding: 0,
+                            borderRadius: 6,
                             cursor: 'pointer',
                             color: Colors.textSecondary,
                             display: 'flex',
@@ -1786,8 +1814,22 @@ export function CustomerDetailScreen() {
         </div>
       )}
 
-      {/* Menú inferior */}
-      <FooterMenu active="Clientes" />
+      {/* Modal de edición de alias y tope de crédito */}
+      {customer.data && (
+        <EditCustomerAliasLimitModal
+          visible={isEditAliasLimitOpen}
+          onClose={() => setIsEditAliasLimitOpen(false)}
+          customerId={customer.data.id}
+          customerName={customer.data.name}
+          initialAlias={customer.data.alias}
+          initialCreditLimit={Number(customer.data.credit_limit || 0)}
+          onSaved={() => {
+            customer.refetch();
+            queryClient.invalidateQueries({ queryKey: ['customer', id] });
+            queryClient.invalidateQueries({ queryKey: ['customers'] });
+          }}
+        />
+      )}
     </div>
   );
 }

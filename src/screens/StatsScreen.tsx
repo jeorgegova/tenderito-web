@@ -271,64 +271,84 @@ export function StatsScreen() {
                   />
                 </div>
 
-                {/* 3 Indicadores: Dinero fiado, Dinero recuperado, Dinero que sigue pendiente */}
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-                    gap: 10,
-                  }}>
-                  {/* Dinero fiado */}
+                {/* 3 Indicadores de período: 2 columnas superiores + 1 fila completa destacada */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <div
                     style={{
-                      padding: '12px 14px',
-                      backgroundColor: '#FFF1F0',
-                      border: '1.5px solid #FCE0DE',
-                      borderRadius: 14,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 4,
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      gap: 8,
                     }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <IoArrowUp size={14} color={Colors.destructive} />
-                      <span style={{ fontSize: 10, fontWeight: 800, color: Colors.destructive, letterSpacing: 0.5 }}>
-                        DINERO FIADO
-                      </span>
+                    {/* Dinero fiado */}
+                    <div
+                      style={{
+                        padding: '12px 14px',
+                        backgroundColor: '#FFF1F0',
+                        border: '1.5px solid #FCE0DE',
+                        borderRadius: 14,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 3,
+                        minWidth: 0,
+                      }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <IoArrowUp size={14} color={Colors.destructive} />
+                        <span style={{ fontSize: 10, fontWeight: 800, color: Colors.destructive, letterSpacing: 0.5 }}>
+                          DINERO FIADO
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 16,
+                          fontWeight: 900,
+                          color: Colors.destructive,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}>
+                        {formatCOP(stats?.periodCreditsTotal ?? 0)}
+                      </div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: Colors.textSecondary }}>
+                        {stats?.periodCreditsCount ?? 0} fiado{(stats?.periodCreditsCount ?? 0) === 1 ? '' : 's'}
+                      </div>
                     </div>
-                    <div style={{ fontSize: 16, fontWeight: 900, color: Colors.destructive }}>
-                      {formatCOP(stats?.periodCreditsTotal ?? 0)}
-                    </div>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: Colors.textSecondary }}>
-                      {stats?.periodCreditsCount ?? 0} fiado{(stats?.periodCreditsCount ?? 0) === 1 ? '' : 's'}
+
+                    {/* Dinero recuperado */}
+                    <div
+                      style={{
+                        padding: '12px 14px',
+                        backgroundColor: Colors.successAlt,
+                        border: '1.5px solid #BBF7D0',
+                        borderRadius: 14,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 3,
+                        minWidth: 0,
+                      }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <IoArrowDown size={14} color={Colors.success} />
+                        <span style={{ fontSize: 10, fontWeight: 800, color: Colors.success, letterSpacing: 0.5 }}>
+                          RECUPERADO
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 16,
+                          fontWeight: 900,
+                          color: Colors.success,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}>
+                        {formatCOP(stats?.periodPaymentsTotal ?? 0)}
+                      </div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: Colors.textSecondary }}>
+                        {stats?.periodPaymentsCount ?? 0} abono{(stats?.periodPaymentsCount ?? 0) === 1 ? '' : 's'}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Dinero recuperado */}
-                  <div
-                    style={{
-                      padding: '12px 14px',
-                      backgroundColor: Colors.successAlt,
-                      border: '1.5px solid #BBF7D0',
-                      borderRadius: 14,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 4,
-                    }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <IoArrowDown size={14} color={Colors.success} />
-                      <span style={{ fontSize: 10, fontWeight: 800, color: Colors.success, letterSpacing: 0.5 }}>
-                        RECUPERADO
-                      </span>
-                    </div>
-                    <div style={{ fontSize: 16, fontWeight: 900, color: Colors.success }}>
-                      {formatCOP(stats?.periodPaymentsTotal ?? 0)}
-                    </div>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: Colors.textSecondary }}>
-                      {stats?.periodPaymentsCount ?? 0} abono{(stats?.periodPaymentsCount ?? 0) === 1 ? '' : 's'}
-                    </div>
-                  </div>
-
-                  {/* Dinero que sigue pendiente */}
+                  {/* Dinero que sigue pendiente (fila completa destacada) */}
                   <div
                     style={{
                       padding: '12px 14px',
@@ -336,20 +356,32 @@ export function StatsScreen() {
                       border: '1.5px solid #FDE68A',
                       borderRadius: 14,
                       display: 'flex',
-                      flexDirection: 'column',
-                      gap: 4,
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 8,
                     }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <IoHourglassOutline size={14} color="#D97706" />
-                      <span style={{ fontSize: 10, fontWeight: 800, color: '#B45309', letterSpacing: 0.5 }}>
-                        SIGUE PENDIENTE
-                      </span>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <IoHourglassOutline size={14} color="#D97706" />
+                        <span style={{ fontSize: 10, fontWeight: 800, color: '#B45309', letterSpacing: 0.5 }}>
+                          SIGUE PENDIENTE
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: Colors.textSecondary, marginTop: 2 }}>
+                        De lo fiado en este período
+                      </div>
                     </div>
-                    <div style={{ fontSize: 16, fontWeight: 900, color: '#B45309' }}>
+                    <div
+                      style={{
+                        fontSize: 18,
+                        fontWeight: 900,
+                        color: '#B45309',
+                        textAlign: 'right',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}>
                       {formatCOP(stats?.periodCreditsPendingTotal ?? 0)}
-                    </div>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: Colors.textSecondary }}>
-                      De lo fiado en período
                     </div>
                   </div>
                 </div>
@@ -749,7 +781,7 @@ export function StatsScreen() {
                   scrollable
                   options={customerFilterOptions}
                   selectedKey={quickFilter}
-                  onSelect={setQuickFilter}
+                  onSelect={key => setQuickFilter(key as QuickFilter)}
                 />
               </div>
 
@@ -850,18 +882,25 @@ export function StatsScreen() {
                         {/* 2. Información Complementaria: Movimientos del período */}
                         <div
                           style={{
-                            fontSize: 12,
-                            color: Colors.textSecondary,
-                            fontWeight: 600,
+                            backgroundColor: '#F8FAFC',
+                            borderRadius: 10,
+                            padding: '8px 10px',
                             display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            padding: '0 2px',
+                            flexDirection: 'column',
+                            gap: 4,
                           }}>
-                          <span>En este período ({activePreset.label}):</span>
-                          <span>
-                            Fiado: <strong style={{ color: Colors.destructive }}>{formatCOP(row.period_credits)}</strong> · Abonado: <strong style={{ color: Colors.success }}>{formatCOP(row.period_payments)}</strong>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: Colors.textSecondary }}>
+                            En este período ({activePreset.label}):
                           </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', fontSize: 12 }}>
+                            <span>
+                              Fiado: <strong style={{ color: Colors.destructive }}>{formatCOP(row.period_credits)}</strong>
+                            </span>
+                            <span style={{ color: Colors.textMuted }}>·</span>
+                            <span>
+                              Abonado: <strong style={{ color: Colors.success }}>{formatCOP(row.period_payments)}</strong>
+                            </span>
+                          </div>
                         </div>
 
                         {/* 3. Acciones claras que no compiten visualmente */}

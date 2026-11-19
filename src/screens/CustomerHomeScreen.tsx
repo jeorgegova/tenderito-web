@@ -25,7 +25,9 @@ import {
   IoNotifications,
   IoNotificationsOutline,
   IoPersonOutline,
+  IoPencilOutline,
 } from 'react-icons/io5';
+import { EditCustomerSelfModal } from '../components/ui/EditCustomerSelfModal';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { DynamicBrandCurves } from '../components/ui/DynamicBrandCurves';
@@ -144,6 +146,7 @@ export function CustomerHomeScreen() {
   const [searchConcept, setSearchConcept] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [notifGranted, setNotifGranted] = useState<boolean>(() => {
     return (
       typeof window !== 'undefined' &&
@@ -440,7 +443,8 @@ export function CustomerHomeScreen() {
 
           {customerName && (
             <div
-              title={`Sesión iniciada como: ${customerName} (Cliente)`}
+              title={`Sesión iniciada como: ${customerName} (Cliente) - Toca para editar tus datos`}
+              onClick={() => setIsEditProfileOpen(true)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -452,6 +456,7 @@ export function CustomerHomeScreen() {
                 boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
                 maxWidth: 180,
                 flexShrink: 0,
+                cursor: 'pointer',
               }}>
               <div
                 style={{
@@ -1289,6 +1294,26 @@ export function CustomerHomeScreen() {
           <div style={{ fontSize: 13, color: Colors.textSecondary, fontWeight: 500, marginTop: 2 }}>
             Tus cuentas en tiendas de barrio
           </div>
+          <button
+            type="button"
+            onClick={() => setIsEditProfileOpen(true)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              marginTop: 6,
+              padding: '4px 10px',
+              borderRadius: 16,
+              backgroundColor: '#F8FAFC',
+              border: `1px solid ${Colors.border}`,
+              color: Colors.text,
+              fontSize: 11.5,
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}>
+            <IoPencilOutline size={13} color={Colors.primary} />
+            <span>Editar mis datos</span>
+          </button>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button
@@ -1655,6 +1680,21 @@ export function CustomerHomeScreen() {
             style={{ padding: '8px 20px' }}
           />
         </div>
+
+        {/* Modal para editar datos personales del cliente */}
+        {data?.customer && (
+          <EditCustomerSelfModal
+            visible={isEditProfileOpen}
+            onClose={() => setIsEditProfileOpen(false)}
+            initialName={data.customer.name || ''}
+            initialPhone={data.customer.phone || ''}
+            documentType={data.customer.document_type}
+            documentNumber={data.customer.document_number}
+            onSaved={() => {
+              refetch();
+            }}
+          />
+        )}
 
         {/* Modal de configuración de notificaciones */}
         <NotificationSettingsModal

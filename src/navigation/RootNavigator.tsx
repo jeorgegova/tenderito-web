@@ -85,12 +85,12 @@ export function RootNavigator() {
         <Route path="/" element={<DashboardScreen />} />
         <Route path="/customers" element={<CustomersScreen />} />
         <Route path="/clientes" element={<Navigate to="/customers" replace />} />
+        <Route path="/customers/:id" element={<CustomerDetailScreen />} />
+        <Route path="/clientes/:id" element={<CustomerDetailScreen />} />
         <Route path="/stats" element={<StatsScreen />} />
         <Route path="/profile" element={<ProfileScreen />} />
       </Route>
       <Route path="/reset-password" element={<ResetPasswordScreen />} />
-      <Route path="/customers/:id" element={<CustomerDetailScreen />} />
-      <Route path="/clientes/:id" element={<CustomerDetailScreen />} />
       <Route path="/customers/:id/history" element={<CustomerHistoryScreen />} />
       <Route path="/clientes/:id/historial" element={<CustomerHistoryScreen />} />
       <Route path="/free-portfolio" element={<FreePortfolioScreen />} />

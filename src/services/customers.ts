@@ -434,6 +434,44 @@ export async function linkCustomerToStore(
 
   // 2. Programar sincronización diferida hacia Supabase
   scheduleSync();
+
+  // 3. Intentar actualización inmediata en Supabase si hay red
+  try {
+    let targetServerId = customerId;
+    if (existing.length > 0 && (existing[0] as any).server_id) {
+      targetServerId = (existing[0] as any).server_id;
+    }
+    if (activeStoreId && targetServerId) {
+      await supabase
+        .from('customer_stores')
+        .update({
+          credit_limit: creditLimit,
+          alias: alias?.trim() || null,
+        })
+        .eq('customer_id', targetServerId)
+        .eq('store_id', activeStoreId);
+    }
+  } catch (_netErr) {}
+}
+
+/**
+ * Permite al tendero actualizar el alias y el cupo máximo (tope) de un cliente para su tienda.
+ */
+export async function updateCustomerAliasAndLimit(
+  customerId: string,
+  alias: string | null,
+  creditLimit: number,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await linkCustomerToStore(
+      customerId,
+      Math.max(0, Number(creditLimit) || 0),
+      alias ? alias.trim() : '',
+    );
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, error: e?.message || 'Error actualizando alias y tope' };
+  }
 }
 
 export async function fetchGlobalCustomerHistory(customerId: string) {

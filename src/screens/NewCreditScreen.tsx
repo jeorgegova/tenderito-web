@@ -240,7 +240,7 @@ export function NewCreditScreen() {
       <div
         style={{
           flex: 1,
-          padding: '16px 20px 24px',
+          padding: '16px 20px 48px',
           maxWidth: 560,
           width: '100%',
           margin: '0 auto',

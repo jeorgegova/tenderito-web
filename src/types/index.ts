@@ -15,6 +15,7 @@ export interface Profile {
   store_name: string;
   merchant_name: string;
   phone: string | null;
+  address?: string | null;
   subscription_plan: SubscriptionPlan | string;
   subscription_start_date?: string | null;
   subscription_end_date?: string | null;

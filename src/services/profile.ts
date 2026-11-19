@@ -72,3 +72,96 @@ export async function fetchProfile(): Promise<Profile | null> {
     return null;
   }
 }
+
+export interface UpdateStoreProfileInput {
+  store_name: string;
+  phone?: string | null;
+  merchant_name?: string | null;
+  address?: string | null;
+}
+
+/**
+ * Actualiza los datos de la tienda propia del tendero (nombre de tienda, teléfono, comerciante, dirección).
+ */
+export async function updateStoreProfile(
+  input: UpdateStoreProfileInput,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const user = session?.user;
+    if (!user) throw new Error('Usuario no autenticado');
+
+    const cleanStoreName = input.store_name.trim();
+    if (!cleanStoreName) throw new Error('El nombre de la tienda es requerido');
+    const cleanPhone = input.phone ? input.phone.replace(/[^0-9]/g, '') : null;
+    const cleanMerchantName = input.merchant_name?.trim() || null;
+    const cleanAddress =
+      input.address !== undefined
+        ? input.address
+          ? input.address.trim()
+          : null
+        : undefined;
+
+    const activeStoreId = await getActiveStoreId();
+
+    // 1. Actualizar tabla stores en Supabase
+    const storePayload: any = {
+      store_name: cleanStoreName,
+      phone: cleanPhone,
+    };
+    if (cleanAddress !== undefined) {
+      storePayload.address = cleanAddress;
+    }
+
+    if (activeStoreId) {
+      const { error: storeErr } = await supabase
+        .from('stores')
+        .update(storePayload)
+        .eq('id', activeStoreId);
+      if (storeErr) throw storeErr;
+    } else {
+      await supabase.from('stores').update(storePayload).eq('owner_id', user.id);
+    }
+
+    // 2. Actualizar tabla profiles en Supabase
+    const profilePayload: any = {
+      store_name: cleanStoreName,
+      phone: cleanPhone,
+    };
+    if (cleanMerchantName) {
+      profilePayload.merchant_name = cleanMerchantName;
+    }
+    if (cleanAddress !== undefined) {
+      profilePayload.address = cleanAddress;
+    }
+
+    const { error: profErr } = await supabase
+      .from('profiles')
+      .update(profilePayload)
+      .eq('id', user.id);
+
+    if (profErr) {
+      // Si la columna address no existiera en profiles, se intenta sin address
+      delete profilePayload.address;
+      await supabase.from('profiles').update(profilePayload).eq('id', user.id);
+    }
+
+    // 3. Sincronizar en memoria en Zustand
+    const current = useStore.getState().profile;
+    if (current) {
+      useStore.getState().setProfile({
+        ...current,
+        store_name: cleanStoreName,
+        phone: cleanPhone,
+        merchant_name: cleanMerchantName || current.merchant_name,
+        address: cleanAddress !== undefined ? cleanAddress : current.address,
+      });
+    }
+
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, error: e?.message || 'Error actualizando tienda' };
+  }
+}
