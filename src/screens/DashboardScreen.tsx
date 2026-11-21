@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -30,16 +30,47 @@ import { useStore } from '../store/useStore';
 import { calculateSubscriptionStatus } from '../services/plans';
 import { fetchFreePortfolioStatus } from '../services/portfolio';
 import { MagnetTabBar } from '../components/ui/MagnetTabBar';
+import {
+  getCachedBalanceVisibility,
+  getStoredBalanceVisibility,
+  setStoredBalanceVisibility,
+} from '../services/storeContext';
 
 export function DashboardScreen() {
   const navigate = useNavigate();
-  const [showBalance, setShowBalance] = useState(true);
   const storeProfile = useStore(s => s.profile);
   const profileQuery = useQuery({
     queryKey: ['profile'],
     queryFn: fetchProfile,
   });
   const profile = profileQuery.data ?? storeProfile;
+  const storeId = profile?.id;
+
+  const [showBalance, setShowBalance] = useState<boolean>(() => {
+    return getCachedBalanceVisibility(storeId);
+  });
+
+  // Al entrar a Inicio o cambiar de tienda, asegurar carga de la parametrización local
+  useEffect(() => {
+    let isMounted = true;
+    getStoredBalanceVisibility(storeId).then(visible => {
+      if (isMounted) {
+        setShowBalance(visible);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [storeId]);
+
+  const handleToggleBalance = () => {
+    setShowBalance(prev => {
+      const next = !prev;
+      setStoredBalanceVisibility(next, storeId);
+      return next;
+    });
+  };
+
   const subStatus = calculateSubscriptionStatus(profile);
 
   const total = useQuery({
@@ -272,7 +303,7 @@ export function DashboardScreen() {
               </span>
             </div>
             <button
-              onClick={() => setShowBalance(v => !v)}
+              onClick={handleToggleBalance}
               aria-label={showBalance ? 'Ocultar saldo' : 'Ver saldo'}
               style={{
                 color: 'rgba(255,255,255,0.9)',

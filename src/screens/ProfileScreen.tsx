@@ -65,6 +65,9 @@ export function ProfileScreen() {
     queryFn: getActiveStoreId,
   });
 
+  const activeStore = userStores.find(s => s.store_id === currentStoreId) || userStores[0];
+  const currentAddress = (data as any)?.address || activeStore?.address || '';
+
   useEffect(() => {
     if (data) {
       setProfile(data as any);
@@ -187,6 +190,7 @@ export function ProfileScreen() {
           <div style={{ fontSize: 13, color: Colors.textSecondary, marginTop: 4 }}>
             {(data as any)?.merchant_name ?? ''}
             {(data as any)?.phone ? ` · Tel: ${(data as any).phone}` : ''}
+            {currentAddress ? ` · Dir: ${currentAddress}` : ''}
           </div>
 
           <button
@@ -638,7 +642,7 @@ export function ProfileScreen() {
           initialStoreName={(data as any)?.store_name || ''}
           initialPhone={(data as any)?.phone || ''}
           initialMerchantName={(data as any)?.merchant_name || ''}
-          initialAddress={(data as any)?.address || ''}
+          initialAddress={currentAddress}
           onSaved={async () => {
             await refetchProfile();
             await refetchStores();

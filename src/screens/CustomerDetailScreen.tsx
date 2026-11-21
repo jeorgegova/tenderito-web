@@ -28,6 +28,7 @@ import { EditCustomerAliasLimitModal } from '../components/ui/EditCustomerAliasL
 import { SyncBadge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
+import { NotebookPaper } from '../components/ui/NotebookPaper';
 import { DynamicBrandCurves } from '../components/ui/DynamicBrandCurves';
 import { FooterMenu } from '../components/ui/FooterMenu';
 import { StoreHistoryLockNotice } from '../components/ui/StoreHistoryLockNotice';
@@ -43,6 +44,7 @@ import { queryClient } from '../lib/queryClient';
 import { useStore } from '../store/useStore';
 import { Colors, Radius, formatCOP } from '../theme';
 import {
+  formatDateCompact,
   formatDateDisplay,
   getBogotaCurrentMonthKey,
   getBogotaMonthKey,
@@ -169,6 +171,14 @@ export function CustomerDetailScreen() {
   const [searchConcept, setSearchConcept] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isEditAliasLimitOpen, setIsEditAliasLimitOpen] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
+
+  const handleBack = () => {
+    setIsLeaving(true);
+    setTimeout(() => {
+      navigate(-1);
+    }, 200);
+  };
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -425,6 +435,9 @@ export function CustomerDetailScreen() {
     });
   };
 
+  const clientDisplayName =
+    customer.data?.alias?.trim() || customer.data?.name?.trim() || 'Cliente';
+
   return (
     <div
       className="fade-in"
@@ -437,60 +450,230 @@ export function CustomerDetailScreen() {
         paddingBottom: 'calc(140px + env(safe-area-inset-bottom, 0px))',
         boxSizing: 'border-box',
       }}>
+      <style>{`
+        @keyframes headerGrowIn {
+          0% {
+            opacity: 0;
+            transform: translateY(-16px) scaleY(0.9);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scaleY(1);
+          }
+        }
+      `}</style>
       <DynamicBrandCurves position="bottom-left" />
 
-      {/* Header superior idéntico al de React Native */}
+      {/* Header superior de Tendero con bordes redondeados inferiores, animación y goteo de marca */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '14px 18px',
-          borderBottom: `1px solid ${Colors.border}`,
+          padding: '12px 18px',
+          borderBottom: '1px solid #F1F5F9',
+          borderBottomLeftRadius: 24,
+          borderBottomRightRadius: 24,
+          boxShadow: '0 4px 14px rgba(0, 0, 0, 0.05)',
           backgroundColor: '#FFFFFF',
           position: 'sticky',
           top: 0,
           zIndex: 100,
+          overflow: 'hidden',
+          transform: isLeaving
+            ? 'translateY(-22px) scaleY(0.9)'
+            : 'translateY(0) scaleY(1)',
+          opacity: isLeaving ? 0 : 1,
+          transition:
+            'transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease',
+          animation: !isLeaving
+            ? 'headerGrowIn 0.28s cubic-bezier(0.16, 1, 0.3, 1)'
+            : 'none',
         }}>
+        {/* Círculos pequeños decorativos tipo goteo ubicados exclusivamente en los extremos laterales (lejos del nombre/alias) */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            pointerEvents: 'none',
+            overflow: 'hidden',
+            zIndex: 0,
+          }}>
+          {/* Extremo izquierdo (detrás del botón de regreso) */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 6,
+              left: 14,
+              width: 12,
+              height: 12,
+              borderRadius: 6,
+              backgroundColor: '#FFE4D0',
+              opacity: 0.9,
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              top: 24,
+              left: 28,
+              width: 7,
+              height: 7,
+              borderRadius: 3.5,
+              backgroundColor: Colors.primary,
+              opacity: 0.85,
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              top: 10,
+              left: 42,
+              width: 8,
+              height: 8,
+              borderRadius: 4,
+              backgroundColor: '#FFE4D0',
+              opacity: 0.75,
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              top: 28,
+              left: 44,
+              width: 5,
+              height: 5,
+              borderRadius: 2.5,
+              backgroundColor: Colors.primary,
+              opacity: 0.7,
+            }}
+          />
+
+          {/* Extremo derecho (detrás del badge de tendero) */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 6,
+              right: 14,
+              width: 12,
+              height: 12,
+              borderRadius: 6,
+              backgroundColor: '#FFE4D0',
+              opacity: 0.9,
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              top: 24,
+              right: 28,
+              width: 7,
+              height: 7,
+              borderRadius: 3.5,
+              backgroundColor: Colors.primary,
+              opacity: 0.85,
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              top: 10,
+              right: 42,
+              width: 8,
+              height: 8,
+              borderRadius: 4,
+              backgroundColor: '#FFE4D0',
+              opacity: 0.75,
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              top: 28,
+              right: 44,
+              width: 5,
+              height: 5,
+              borderRadius: 2.5,
+              backgroundColor: Colors.primary,
+              opacity: 0.7,
+            }}
+          />
+        </div>
+
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={handleBack}
+          aria-label="Volver"
+          title="Volver"
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            backgroundColor: '#FFF7ED',
+            border: '1px solid #FFEDD5',
+            color: Colors.primary,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            padding: 0,
+            position: 'relative',
+            zIndex: 1,
+            flexShrink: 0,
+            transition: 'background-color 0.15s ease, transform 0.15s ease',
+          }}>
+          <IoArrowBack size={19} />
+        </button>
+
+        <span
+          style={{
+            fontSize: 16,
+            fontWeight: 800,
+            color: Colors.text,
+            maxWidth: '48%',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            textAlign: 'center',
+            position: 'relative',
+            zIndex: 1,
+          }}>
+          {clientDisplayName}
+        </span>
+
+        <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 6,
-            color: Colors.primary,
-            fontWeight: 700,
-            fontSize: 15,
-            border: 'none',
-            background: 'none',
-            cursor: 'pointer',
-            padding: 0,
+            gap: 8,
+            position: 'relative',
+            zIndex: 1,
+            flexShrink: 0,
           }}>
-          <IoArrowBack size={20} />
-          <span>Volver</span>
-        </button>
-
-        <span style={{ fontSize: 16, fontWeight: 800, color: Colors.text }}>
-          Cliente
-        </span>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {customer.data?.phone && (
             <button
               type="button"
               onClick={handleShareWhatsApp}
               title="Compartir saldo por WhatsApp"
               style={{
-                color: '#25D366',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
+                width: 34,
+                height: 34,
+                borderRadius: 17,
+                backgroundColor: '#DCFCE7',
+                border: '1px solid #BBF7D0',
+                color: '#16A34A',
                 display: 'flex',
                 alignItems: 'center',
-                padding: 4,
+                justifyContent: 'center',
+                cursor: 'pointer',
+                padding: 0,
+                flexShrink: 0,
+                transition: 'transform 0.15s ease',
               }}>
-              <IoLogoWhatsapp size={22} />
+              <IoLogoWhatsapp size={19} />
             </button>
           )}
 
@@ -522,7 +705,12 @@ export function CustomerDetailScreen() {
                 }}>
                 <IoPersonOutline size={12} />
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  minWidth: 0,
+                }}>
                 <span
                   style={{
                     fontSize: 8,
@@ -882,262 +1070,466 @@ export function CustomerDetailScreen() {
           />
         </div>
 
-        {/* ── Cabecera de la Tabla Libreta con Filtro Mes y Buscador Animado ── */}
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'row',
-            alignItems: 'center',
-            backgroundColor: '#F8FAFC',
-            borderTopLeftRadius: Radius.lg,
-            borderTopRightRadius: Radius.lg,
-            border: '1px solid #E2E8F0',
-            padding: '8px 12px',
-            minHeight: 46,
-            boxSizing: 'border-box',
-          }}>
-          {/* Filtro Mes */}
-          <div style={{ width: 90, flexShrink: 0 }}>
-            <button
-              type="button"
-              onClick={() => setIsMonthModalVisible(true)}
+        {/* ── Libreta de Apuntes en Hoja Argollada ── */}
+        <NotebookPaper style={{ marginBottom: 16 }}>
+          {/* Cabecera de la Libreta: Fila 1 - Columnas y Controles */}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: '#FFF8EE',
+              borderBottom:
+                isSearchOpen || searchConcept.trim().length > 0
+                  ? '1px dashed #CFE0F1'
+                  : '1.5px solid #CFE0F1',
+              padding: '8px 10px',
+              minHeight: 44,
+              boxSizing: 'border-box',
+            }}>
+            {/* Filtro Mes (Columna Fecha) */}
+            <div style={{ width: 80, flexShrink: 0 }}>
+              <button
+                type="button"
+                onClick={() => setIsMonthModalVisible(true)}
+                style={{
+                  display: 'inline-flex',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: '#FED7AA',
+                  padding: '3px 6px',
+                  borderRadius: Radius.sm,
+                  gap: 3,
+                  border: 'none',
+                  cursor: 'pointer',
+                  maxWidth: '100%',
+                }}>
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 800,
+                    color: '#9A3412',
+                    letterSpacing: 0.2,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}>
+                  {formatMonthHeader(selectedMonth)}
+                </span>
+                <IoCaretDown size={9} color="#9A3412" />
+              </button>
+            </div>
+
+            {/* Columna QUÉ SE LLEVÓ / ABONO con botón de búsqueda */}
+            <div
               style={{
-                display: 'inline-flex',
-                flexDirection: 'row',
+                flex: 1,
+                padding: '0 6px',
+                display: 'flex',
                 alignItems: 'center',
-                backgroundColor: '#FED7AA',
-                padding: '4px 6px',
-                borderRadius: Radius.sm,
-                gap: 3,
-                border: 'none',
-                cursor: 'pointer',
-                maxWidth: '100%',
+                gap: 5,
+                minWidth: 0,
               }}>
               <span
                 style={{
-                  fontSize: 10,
+                  fontSize: 10.5,
                   fontWeight: 800,
-                  color: '#9A3412',
+                  color: Colors.textSecondary,
                   letterSpacing: 0.5,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
                 }}>
-                {formatMonthHeader(selectedMonth)}
+                QUÉ SE LLEVÓ / ABONO
               </span>
-              <IoCaretDown size={10} color="#9A3412" />
-            </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (isSearchOpen) {
+                    handleCloseSearch();
+                  } else {
+                    handleOpenSearch();
+                  }
+                }}
+                title={isSearchOpen ? 'Cerrar buscador' : 'Buscar por concepto'}
+                style={{
+                  padding: 3,
+                  borderRadius: Radius.sm,
+                  backgroundColor:
+                    searchConcept.trim() || isSearchOpen
+                      ? Colors.primary
+                      : '#FED7AA',
+                  border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  transition:
+                    'background-color 250ms ease, transform 200ms ease',
+                }}>
+                <IoSearch
+                  size={12}
+                  color={
+                    searchConcept.trim() || isSearchOpen
+                      ? '#FFFFFF'
+                      : '#9A3412'
+                  }
+                />
+              </button>
+            </div>
+
+            {/* Columna Valor */}
+            <div
+              style={{
+                width: 82,
+                display: 'flex',
+                justifyContent: 'flex-end',
+                flexShrink: 0,
+              }}>
+              <span
+                style={{
+                  fontSize: 10.5,
+                  fontWeight: 800,
+                  color: Colors.textSecondary,
+                  letterSpacing: 0.5,
+                }}>
+                VALOR
+              </span>
+            </div>
+
+            {/* Espacio para alinear con la columna de anular */}
+            <div style={{ width: 30, flexShrink: 0 }} />
           </div>
 
-          {/* Filtro QUÉ SE LLEVÓ / ABONO con Lupa interactiva y búsqueda */}
+          {/* Fila 2: Campo de búsqueda dedicado con animación fluida de expansión horizontal */}
           <div
             style={{
-              flex: 1,
-              padding: '0 6px',
-              position: 'relative',
-              height: 32,
+              maxHeight:
+                isSearchOpen || searchConcept.trim().length > 0 ? 54 : 0,
+              opacity: isSearchOpen || searchConcept.trim().length > 0 ? 1 : 0,
+              padding:
+                isSearchOpen || searchConcept.trim().length > 0
+                  ? '6px 10px 8px'
+                  : '0 10px',
+              backgroundColor: '#FFF8EE',
+              borderBottom:
+                isSearchOpen || searchConcept.trim().length > 0
+                  ? '1.5px solid #CFE0F1'
+                  : '0px solid transparent',
+              overflow: 'hidden',
+              boxSizing: 'border-box',
               display: 'flex',
+              flexDirection: 'row',
               alignItems: 'center',
-              minWidth: 0,
+              gap: 8,
+              transition:
+                'max-height 650ms cubic-bezier(0.25, 0.1, 0.25, 1), opacity 500ms ease-in-out, padding 650ms cubic-bezier(0.25, 0.1, 0.25, 1)',
+              pointerEvents:
+                isSearchOpen || searchConcept.trim().length > 0
+                  ? 'auto'
+                  : 'none',
             }}>
-            {!isSearchOpen ? (
-              <div
+            <div
+              style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: '#FFFFFF',
+                border: `1.5px solid ${Colors.primary}`,
+                borderRadius: Radius.sm,
+                padding: '0 8px',
+                height: 32,
+                gap: 6,
+                boxSizing: 'border-box',
+                transformOrigin: 'left center',
+                transform:
+                  isSearchOpen || searchConcept.trim().length > 0
+                    ? 'scaleX(1)'
+                    : 'scaleX(0.08)',
+                opacity:
+                  isSearchOpen || searchConcept.trim().length > 0 ? 1 : 0,
+                transition:
+                  'transform 650ms cubic-bezier(0.25, 0.1, 0.25, 1), opacity 500ms ease-in-out',
+              }}>
+              <IoSearch
+                size={13}
+                color={Colors.primary}
+                style={{ flexShrink: 0 }}
+              />
+              <input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Buscar qué se llevó o abonó..."
+                value={searchConcept}
+                onChange={e => setSearchConcept(e.target.value)}
                 style={{
-                  display: 'flex',
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 6,
-                  width: '100%',
-                }}>
-                <span
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 800,
-                    color: Colors.textSecondary,
-                    letterSpacing: 0.6,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}>
-                  QUÉ SE LLEVÓ / ABONO
-                </span>
+                  flex: 1,
+                  border: 'none',
+                  outline: 'none',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: Colors.text,
+                  padding: 0,
+                  background: 'transparent',
+                  minWidth: 0,
+                  opacity:
+                    isSearchOpen || searchConcept.trim().length > 0 ? 1 : 0,
+                  transition: 'opacity 450ms ease 150ms',
+                }}
+              />
+              {searchConcept.length > 0 && (
                 <button
                   type="button"
-                  onClick={handleOpenSearch}
-                  title="Buscar concepto"
+                  onClick={() => setSearchConcept('')}
+                  title="Borrar texto"
                   style={{
-                    padding: 4,
-                    borderRadius: Radius.sm,
-                    backgroundColor:
-                      searchConcept.trim().length > 0
-                        ? Colors.primary
-                        : '#FED7AA',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: 'none',
-                    cursor: 'pointer',
-                  }}>
-                  <IoSearch
-                    size={12}
-                    color={
-                      searchConcept.trim().length > 0 ? '#FFFFFF' : '#9A3412'
-                    }
-                  />
-                </button>
-              </div>
-            ) : (
-              <div
-                style={{
-                  position: 'absolute',
-                  left: 2,
-                  right: 2,
-                  top: 0,
-                  bottom: 0,
-                  display: 'flex',
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  backgroundColor: '#FFFFFF',
-                  border: `1.5px solid ${Colors.primary}`,
-                  borderRadius: Radius.sm,
-                  padding: '0 6px',
-                  height: 32,
-                  gap: 4,
-                  boxSizing: 'border-box',
-                }}>
-                <IoSearch size={12} color={Colors.primary} style={{ flexShrink: 0 }} />
-                <input
-                  ref={searchInputRef}
-                  style={{
-                    flex: 1,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: Colors.text,
-                    border: 'none',
-                    outline: 'none',
-                    padding: 0,
-                    background: 'transparent',
-                    minWidth: 0,
-                  }}
-                  placeholder="Buscar qué se llevó..."
-                  value={searchConcept}
-                  onChange={e => setSearchConcept(e.target.value)}
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  onClick={handleCloseSearch}
-                  title="Cerrar búsqueda"
-                  style={{
-                    border: 'none',
                     background: 'none',
-                    padding: 0,
-                    display: 'flex',
-                    alignItems: 'center',
+                    border: 'none',
+                    padding: 2,
                     cursor: 'pointer',
                     color: Colors.textSecondary,
+                    display: 'flex',
+                    alignItems: 'center',
                   }}>
                   <IoCloseCircle size={15} />
                 </button>
-              </div>
-            )}
-          </div>
-
-          {/* Columna Valor */}
-          <div
-            style={{
-              width: 90,
-              display: 'flex',
-              justifyContent: 'flex-end',
-              flexShrink: 0,
-            }}>
-            <span
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={handleCloseSearch}
               style={{
-                fontSize: 11,
-                fontWeight: 800,
-                color: Colors.textSecondary,
-                letterSpacing: 0.6,
+                border: 'none',
+                background: 'none',
+                padding: '4px 6px',
+                fontSize: 12,
+                fontWeight: 700,
+                color: Colors.primary,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                opacity:
+                  isSearchOpen || searchConcept.trim().length > 0 ? 1 : 0,
+                transform:
+                  isSearchOpen || searchConcept.trim().length > 0
+                    ? 'translateX(0)'
+                    : 'translateX(12px)',
+                transition:
+                  'opacity 480ms ease 120ms, transform 480ms ease 120ms',
               }}>
-              VALOR
-            </span>
+              Cerrar
+            </button>
           </div>
-          {/* Espacio para alinear con la columna de anular */}
-          <div style={{ width: 32, flexShrink: 0 }} />
-        </div>
 
-        {/* ── Filas de la Tabla ── */}
-        {filteredMovements.length > 0 ? (
-          <div>
-            {filteredMovements.map((item, index) => {
-              const isCredit = item.kind === 'credit';
-              const isCancelled = item.status === 'cancelled';
-              const overdue = isCredit && !isCancelled && isOverdueBogota(item.dueDate);
-
-              return (
-                <div
-                  key={`${item.kind}-${item.id}`}
+          {/* ── Filas de la Libreta ── */}
+          {credits.isLoading || payments.isLoading ? (
+            <div
+              style={{
+                padding: 32,
+                textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 8,
+              }}>
+              <span
+                style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: Colors.textSecondary,
+                }}>
+                Cargando libreta...
+              </span>
+            </div>
+          ) : filteredMovements.length === 0 ? (
+            <div
+              style={{
+                padding: 28,
+                textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 6,
+              }}>
+              {searchConcept.trim().length > 0 ? (
+                <IoSearchOutline size={34} color={Colors.textMuted} />
+              ) : (
+                <IoReceiptOutline size={34} color={Colors.textMuted} />
+              )}
+              <div
+                style={{
+                  fontSize: 15,
+                  fontWeight: 800,
+                  color: Colors.text,
+                }}>
+                {searchConcept.trim().length > 0
+                  ? 'Sin coincidencias'
+                  : 'Sin movimientos en este mes'}
+              </div>
+              <div
+                style={{
+                  fontSize: 12,
+                  color: Colors.textSecondary,
+                  maxWidth: 320,
+                  lineHeight: 1.4,
+                }}>
+                {searchConcept.trim().length > 0
+                  ? `No hay compras ni abonos que contengan "${searchConcept}".`
+                  : allMovements.length === 0
+                  ? 'Este cliente aún no tiene compras fiadas ni abonos registrados.'
+                  : `No hay compras ni abonos registrados para ${formatMonthLabel(
+                      selectedMonth,
+                    )}.`}
+              </div>
+              {searchConcept.trim().length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchConcept('');
+                    handleCloseSearch();
+                  }}
                   style={{
-                    display: 'flex',
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    padding: '12px 12px',
-                    backgroundColor: isCancelled
-                      ? '#F1F5F9'
-                      : index % 2 === 1
-                      ? '#F8FAFC'
-                      : '#FFFFFF',
-                    borderLeft: '1px solid #E2E8F0',
-                    borderRight: '1px solid #E2E8F0',
-                    borderBottom: '1px solid #E2E8F0',
-                    boxSizing: 'border-box',
-                    opacity: isCancelled ? 0.72 : 1,
+                    marginTop: 10,
+                    padding: '6px 14px',
+                    borderRadius: Radius.md,
+                    backgroundColor: '#FFEDD5',
+                    border: '1px solid #FDBA74',
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: '#9A3412',
+                    cursor: 'pointer',
                   }}>
-                  {/* Columna Fecha */}
-                  <div style={{ width: 90, flexShrink: 0 }}>
-                    <span
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 700,
-                        color: isCancelled ? '#94A3B8' : Colors.textSecondary,
-                        textDecoration: isCancelled ? 'line-through' : 'none',
-                      }}>
-                      {formatDateDisplay(item.date)}
-                    </span>
-                  </div>
+                  Limpiar búsqueda
+                </button>
+              ) : selectedMonth !== 'all' && allMovements.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setSelectedMonth('all')}
+                  style={{
+                    marginTop: 10,
+                    padding: '6px 14px',
+                    borderRadius: Radius.md,
+                    backgroundColor: '#FFEDD5',
+                    border: '1px solid #FDBA74',
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: '#9A3412',
+                    cursor: 'pointer',
+                  }}>
+                  Ver historial completo ({allMovements.length})
+                </button>
+              ) : null}
+            </div>
+          ) : (
+            <>
+              {filteredMovements.map(item => {
+                const isCredit = item.kind === 'credit';
+                const isCancelled = item.status === 'cancelled';
+                const overdue =
+                  isCredit && !isCancelled && isOverdueBogota(item.dueDate);
 
-                  {/* Columna Detalle */}
-                  <div style={{ flex: 1, padding: '0 6px', minWidth: 0 }}>
-                    <div
-                      style={{
-                        fontSize: 13,
-                        fontWeight: 700,
-                        color: isCancelled ? '#94A3B8' : Colors.text,
-                        textDecoration: isCancelled ? 'line-through' : 'none',
-                        overflow: 'hidden',
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                      }}>
-                      {item.title}
+                return (
+                  <div
+                    key={`${item.kind}-${item.id}`}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      padding: '10px 10px',
+                      backgroundColor: isCancelled
+                        ? '#F7F4EB'
+                        : 'transparent',
+                      borderBottom: '1px solid #CFE0F1',
+                      boxSizing: 'border-box',
+                      opacity: isCancelled ? 0.72 : 1,
+                    }}>
+                    {/* Columna Fecha */}
+                    <div style={{ width: 80, flexShrink: 0 }}>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: isCancelled ? '#94A3B8' : Colors.textSecondary,
+                          textDecoration: isCancelled ? 'line-through' : 'none',
+                          whiteSpace: 'nowrap',
+                        }}>
+                        {formatDateCompact(item.date)}
+                      </span>
                     </div>
 
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 6,
-                        marginTop: 3,
-                        flexWrap: 'wrap',
-                      }}>
-                      {isCancelled ? (
-                        <>
+                    {/* Columna Detalle */}
+                    <div style={{ flex: 1, padding: '0 6px', minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: 12.5,
+                          fontWeight: 700,
+                          color: isCancelled ? '#94A3B8' : Colors.text,
+                          textDecoration: isCancelled ? 'line-through' : 'none',
+                          lineHeight: '17px',
+                          wordBreak: 'break-word',
+                        }}>
+                        {item.title}
+                      </div>
+
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                          marginTop: 3,
+                          flexWrap: 'wrap',
+                        }}>
+                        {isCancelled ? (
+                          <>
+                            <div
+                              style={{
+                                padding: '2px 7px',
+                                borderRadius: 4,
+                                backgroundColor: '#E2E8F0',
+                                border: '1px solid #CBD5E1',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                              }}>
+                              <span
+                                style={{
+                                  fontSize: 10,
+                                  fontWeight: 800,
+                                  color: '#64748B',
+                                }}>
+                                Cancelado
+                              </span>
+                            </div>
+                            <div
+                              style={{
+                                padding: '2px 6px',
+                                borderRadius: 4,
+                                backgroundColor: '#F1F5F9',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                              }}>
+                              <span
+                                style={{
+                                  fontSize: 10,
+                                  fontWeight: 700,
+                                  color: '#94A3B8',
+                                  textDecoration: 'line-through',
+                                }}>
+                                {isCredit
+                                  ? 'Compra fiada (+)'
+                                  : 'Abono recibido (-)'}
+                              </span>
+                            </div>
+                          </>
+                        ) : (
                           <div
                             style={{
-                              padding: '2px 7px',
+                              padding: '2px 6px',
                               borderRadius: 4,
-                              backgroundColor: '#E2E8F0',
-                              border: '1px solid #CBD5E1',
+                              backgroundColor: isCredit
+                                ? '#FEE2E2'
+                                : '#DCFCE7',
                               display: 'inline-flex',
                               alignItems: 'center',
                             }}>
@@ -1145,174 +1537,164 @@ export function CustomerDetailScreen() {
                               style={{
                                 fontSize: 10,
                                 fontWeight: 800,
-                                color: '#64748B',
+                                color: isCredit
+                                  ? Colors.destructive
+                                  : '#15803D',
                               }}>
-                              Cancelado
+                              {isCredit
+                                ? 'Compra fiada (+)'
+                                : 'Abono recibido (-)'}
                             </span>
                           </div>
-                          <div
-                            style={{
-                              padding: '2px 6px',
-                              borderRadius: 4,
-                              backgroundColor: '#F1F5F9',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                            }}>
-                            <span
-                              style={{
-                                fontSize: 10,
-                                fontWeight: 700,
-                                color: '#94A3B8',
-                                textDecoration: 'line-through',
-                              }}>
-                              {isCredit ? 'Compra fiada (+)' : 'Abono recibido (-)'}
-                            </span>
-                          </div>
-                        </>
-                      ) : (
+                        )}
+                        <SyncBadge estadoServidor={item.estadoServidor} />
+                      </div>
+
+                      {item.dueDate ? (
                         <div
                           style={{
-                            padding: '2px 6px',
-                            borderRadius: 4,
-                            backgroundColor: isCredit ? '#FEE2E2' : '#DCFCE7',
-                            display: 'inline-flex',
+                            display: 'flex',
+                            flexDirection: 'row',
                             alignItems: 'center',
+                            gap: 4,
+                            marginTop: 3,
                           }}>
+                          <IoCalendarOutline
+                            size={11}
+                            color={
+                              isCancelled
+                                ? '#94A3B8'
+                                : overdue
+                                ? Colors.destructive
+                                : Colors.textSecondary
+                            }
+                          />
                           <span
                             style={{
-                              fontSize: 10,
-                              fontWeight: 800,
-                              color: isCredit ? Colors.destructive : '#15803D',
+                              fontSize: 10.5,
+                              fontWeight:
+                                isCancelled ? 500 : overdue ? 700 : 600,
+                              color: isCancelled
+                                ? '#94A3B8'
+                                : overdue
+                                ? Colors.destructive
+                                : Colors.textSecondary,
+                              textDecoration: isCancelled
+                                ? 'line-through'
+                                : 'none',
                             }}>
-                            {isCredit ? 'Compra fiada (+)' : 'Abono recibido (-)'}
+                            {overdue
+                              ? `Vencido el: ${formatDateDisplay(item.dueDate)}`
+                              : `Vence el: ${formatDateDisplay(item.dueDate)}`}
                           </span>
                         </div>
-                      )}
-                      <SyncBadge estadoServidor={item.estadoServidor} />
+                      ) : null}
                     </div>
 
-                    {item.dueDate ? (
-                      <div
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          gap: 4,
-                          marginTop: 3,
-                        }}>
-                        <IoCalendarOutline
-                          size={12}
-                          color={
-                            isCancelled
-                              ? '#94A3B8'
-                              : overdue
-                              ? Colors.destructive
-                              : Colors.textSecondary
-                          }
-                        />
-                        <span
-                          style={{
-                            fontSize: 11,
-                            fontWeight: isCancelled ? 500 : overdue ? 700 : 600,
-                            color: isCancelled
-                              ? '#94A3B8'
-                              : overdue
-                              ? Colors.destructive
-                              : Colors.textSecondary,
-                            textDecoration: isCancelled ? 'line-through' : 'none',
-                          }}>
-                          {overdue
-                            ? `Vencido el: ${formatDateDisplay(item.dueDate)}`
-                            : `Vence el: ${formatDateDisplay(item.dueDate)}`}
-                        </span>
-                      </div>
-                    ) : null}
-                  </div>
-
-                  {/* Columna Monto */}
-                  <div
-                    style={{
-                      width: 90,
-                      display: 'flex',
-                      justifyContent: 'flex-end',
-                      flexShrink: 0,
-                    }}>
-                    <span
+                    {/* Columna Monto */}
+                    <div
                       style={{
-                        fontSize: 14,
-                        fontWeight: 800,
-                        color: isCancelled
-                          ? '#94A3B8'
-                          : isCredit
-                          ? Colors.destructive
-                          : '#15803D',
-                        textDecoration: isCancelled ? 'line-through' : 'none',
-                        whiteSpace: 'nowrap',
+                        width: 82,
+                        display: 'flex',
+                        justifyContent: 'flex-end',
+                        flexShrink: 0,
                       }}>
-                      {isCredit ? '+' : '−'}
-                      {formatCOP(item.amount)}
-                    </span>
+                      <span
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 800,
+                          color: isCancelled
+                            ? '#94A3B8'
+                            : isCredit
+                            ? Colors.destructive
+                            : '#15803D',
+                          textDecoration: isCancelled ? 'line-through' : 'none',
+                          whiteSpace: 'nowrap',
+                        }}>
+                        {isCredit ? '+' : '−'}
+                        {formatCOP(item.amount)}
+                      </span>
+                    </div>
+
+                    {/* Botón Anular Movimiento */}
+                    <div
+                      style={{
+                        width: 30,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}>
+                      {!isCancelled &&
+                        (() => {
+                          const diffHours =
+                            (Date.now() - new Date(item.date).getTime()) /
+                            (1000 * 60 * 60);
+                          if (diffHours > 24) return null;
+
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => handleVoidMovement(item)}
+                              title={
+                                isCredit ? 'Anular fiado' : 'Anular abono'
+                              }
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                width: 28,
+                                height: 28,
+                                padding: 0,
+                                borderRadius: 6,
+                                cursor: 'pointer',
+                                color: Colors.textSecondary,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.15s',
+                              }}
+                              onMouseEnter={e => {
+                                e.currentTarget.style.backgroundColor =
+                                  '#FEE2E2';
+                                e.currentTarget.style.color = Colors.destructive;
+                              }}
+                              onMouseLeave={e => {
+                                e.currentTarget.style.backgroundColor =
+                                  'transparent';
+                                e.currentTarget.style.color =
+                                  Colors.textSecondary;
+                              }}>
+                              <IoTrashOutline size={15} />
+                            </button>
+                          );
+                        })()}
+                    </div>
                   </div>
+                );
+              })}
 
-                  {/* Botón Anular Movimiento */}
-                  <div
-                    style={{
-                      width: 32,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                    }}>
-                    {!isCancelled && (() => {
-                      const diffHours = (Date.now() - new Date(item.date).getTime()) / (1000 * 60 * 60);
-                      if (diffHours > 24) return null;
+              {/* Renglones decorativos vacíos si hay pocos movimientos */}
+              {Array.from({
+                length: Math.max(0, 3 - filteredMovements.length),
+              }).map((_, i) => (
+                <div
+                  key={`blank-dt-${i}`}
+                  style={{
+                    height: 38,
+                    borderBottom: '1px solid #CFE0F1',
+                  }}
+                />
+              ))}
+            </>
+          )}
 
-                      return (
-                        <button
-                          type="button"
-                          onClick={() => handleVoidMovement(item)}
-                          title={isCredit ? 'Anular fiado' : 'Anular abono'}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            width: 28,
-                            height: 28,
-                            padding: 0,
-                            borderRadius: 6,
-                            cursor: 'pointer',
-                            color: Colors.textSecondary,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'all 0.15s',
-                          }}
-                          onMouseEnter={e => {
-                            e.currentTarget.style.backgroundColor = '#FEE2E2';
-                            e.currentTarget.style.color = Colors.destructive;
-                          }}
-                          onMouseLeave={e => {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                            e.currentTarget.style.color = Colors.textSecondary;
-                          }}>
-                          <IoTrashOutline size={16} />
-                        </button>
-                      );
-                    })()}
-                  </div>
-                </div>
-              );
-            })}
-
-            {/* Resumen inferior de la tabla */}
+          {/* Resumen inferior de la libreta */}
+          {monthMovements.length > 0 && (
             <div
               style={{
-                backgroundColor: '#F8FAFC',
-                borderLeft: '1px solid #E2E8F0',
-                borderRight: '1px solid #E2E8F0',
-                borderBottom: '1px solid #E2E8F0',
-                borderBottomLeftRadius: Radius.lg,
-                borderBottomRightRadius: Radius.lg,
-                padding: 14,
+                backgroundColor: '#FFF8EE',
+                borderTop: '1px solid #CFE0F1',
+                padding: '14px 16px',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 6,
@@ -1375,7 +1757,7 @@ export function CustomerDetailScreen() {
               <div
                 style={{
                   height: 1,
-                  backgroundColor: '#E2E8F0',
+                  backgroundColor: '#CFE0F1',
                   margin: '4px 0',
                 }}
               />
@@ -1405,104 +1787,8 @@ export function CustomerDetailScreen() {
                 </span>
               </div>
             </div>
-          </div>
-        ) : (
-          /* Estado vacío de la tabla */
-          <div
-            style={{
-              backgroundColor: '#FFFFFF',
-              borderLeft: '1px solid #E2E8F0',
-              borderRight: '1px solid #E2E8F0',
-              borderBottom: '1px solid #E2E8F0',
-              borderBottomLeftRadius: Radius.lg,
-              borderBottomRightRadius: Radius.lg,
-              padding: 28,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 6,
-              textAlign: 'center',
-              boxSizing: 'border-box',
-            }}>
-            {credits.isLoading || payments.isLoading ? (
-              <span style={{ fontSize: 13, color: Colors.textSecondary }}>
-                Cargando libreta...
-              </span>
-            ) : (
-              <>
-                {searchConcept.trim().length > 0 ? (
-                  <IoSearchOutline size={36} color={Colors.textMuted} />
-                ) : (
-                  <IoReceiptOutline size={36} color={Colors.textMuted} />
-                )}
-                <span
-                  style={{
-                    fontSize: 15,
-                    fontWeight: 800,
-                    color: Colors.text,
-                  }}>
-                  {searchConcept.trim().length > 0
-                    ? 'Sin coincidencias'
-                    : 'Sin movimientos en este mes'}
-                </span>
-                <span
-                  style={{
-                    fontSize: 12,
-                    color: Colors.textSecondary,
-                    textAlign: 'center',
-                    maxWidth: 320,
-                  }}>
-                  {searchConcept.trim().length > 0
-                    ? `No hay compras ni abonos que contengan "${searchConcept}".`
-                    : allMovements.length === 0
-                    ? 'Este cliente aún no tiene compras fiadas ni abonos registrados.'
-                    : `No hay compras ni abonos registrados para ${formatMonthLabel(
-                        selectedMonth,
-                      )}.`}
-                </span>
-
-                {searchConcept.trim().length > 0 ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSearchConcept('');
-                      handleCloseSearch();
-                    }}
-                    style={{
-                      marginTop: 10,
-                      padding: '6px 14px',
-                      borderRadius: Radius.md,
-                      backgroundColor: '#FFEDD5',
-                      border: '1px solid #FDBA74',
-                      fontSize: 12,
-                      fontWeight: 700,
-                      color: '#9A3412',
-                      cursor: 'pointer',
-                    }}>
-                    Limpiar búsqueda
-                  </button>
-                ) : selectedMonth !== 'all' && allMovements.length > 0 ? (
-                  <button
-                    type="button"
-                    onClick={() => setSelectedMonth('all')}
-                    style={{
-                      marginTop: 10,
-                      padding: '6px 14px',
-                      borderRadius: Radius.md,
-                      backgroundColor: '#FFEDD5',
-                      border: '1px solid #FDBA74',
-                      fontSize: 12,
-                      fontWeight: 700,
-                      color: '#9A3412',
-                      cursor: 'pointer',
-                    }}>
-                    Ver historial completo ({allMovements.length})
-                  </button>
-                ) : null}
-              </>
-            )}
-          </div>
-        )}
+          )}
+        </NotebookPaper>
       </div>
 
       {/* ── Modal para seleccionar el mes ── */}

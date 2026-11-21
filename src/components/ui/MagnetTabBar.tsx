@@ -189,7 +189,7 @@ export function MagnetTabBar({ active, onPressItem }: MagnetTabBarProps) {
               transform: `translate3d(${pillStyle.left}px, 0, 0)`,
               transition: isFirstRender.current
                 ? 'none'
-                : 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                : 'transform 0.26s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)',
               pointerEvents: 'none',
               zIndex: 0,
             }}

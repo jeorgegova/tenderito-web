@@ -104,7 +104,7 @@ export function EditCustomerSelfModal({
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
           overflow: 'hidden',
         }}>
-        {/* Header del Modal */}
+        {/* Header del Modal (Fijo) */}
         <div
           style={{
             padding: '18px 20px',
@@ -112,6 +112,7 @@ export function EditCustomerSelfModal({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            flexShrink: 0,
           }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div
@@ -151,81 +152,102 @@ export function EditCustomerSelfModal({
           </button>
         </div>
 
-        {/* Contenido del Formulario */}
+        {/* Formulario con cuerpo scrollable y footer fijo */}
         <form
           onSubmit={handleSave}
           style={{
-            padding: 20,
-            overflowY: 'auto',
             display: 'flex',
             flexDirection: 'column',
-            gap: 14,
+            overflow: 'hidden',
+            flex: 1,
+            minHeight: 0,
           }}>
-          {error && (
-            <div
-              style={{
-                padding: '10px 14px',
-                borderRadius: Radius.md,
-                backgroundColor: '#FEE2E2',
-                color: '#991B1B',
-                fontSize: 13,
-                fontWeight: 600,
-              }}>
-              {error}
+          {/* Cuerpo desplazable */}
+          <div
+            style={{
+              padding: 20,
+              overflowY: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 14,
+              flex: 1,
+              minHeight: 0,
+            }}>
+            {error && (
+              <div
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: Radius.md,
+                  backgroundColor: '#FEE2E2',
+                  color: '#991B1B',
+                  fontSize: 13,
+                  fontWeight: 600,
+                }}>
+                {error}
+              </div>
+            )}
+
+            <div>
+              <Input
+                label="Tu nombre completo *"
+                value={name}
+                onChange={e => {
+                  setName(e.target.value);
+                  if (error) setError(null);
+                }}
+                placeholder="Ej: Juan Camilo Pérez"
+                disabled={loading}
+              />
             </div>
-          )}
 
-          <div>
-            <Input
-              label="Tu nombre completo *"
-              value={name}
-              onChange={e => {
-                setName(e.target.value);
-                if (error) setError(null);
-              }}
-              placeholder="Ej: Juan Camilo Pérez"
-              disabled={loading}
-            />
+            <div>
+              <Input
+                label="Tu número telefónico / celular *"
+                type="tel"
+                value={phone}
+                onChange={e => {
+                  setPhone(e.target.value.replace(/[^0-9]/g, ''));
+                  if (error) setError(null);
+                }}
+                placeholder="Ej: 300 123 4567"
+                disabled={loading}
+              />
+            </div>
+
+            <div>
+              <Input
+                label="Número de documento"
+                value={`${documentType || 'CC'} ${documentNumber || ''}`}
+                disabled={true}
+                readOnly={true}
+                style={{ backgroundColor: '#F8FAFC', color: Colors.textSecondary }}
+              />
+              <p
+                style={{
+                  fontSize: 11,
+                  color: Colors.textMuted,
+                  marginTop: 4,
+                  margin: '4px 0 0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                }}>
+                <IoShieldCheckmarkOutline size={13} color="#059669" />
+                Tu documento es tu identificación única y no puede ser alterado.
+              </p>
+            </div>
           </div>
 
-          <div>
-            <Input
-              label="Tu número telefónico / celular *"
-              type="tel"
-              value={phone}
-              onChange={e => {
-                setPhone(e.target.value.replace(/[^0-9]/g, ''));
-                if (error) setError(null);
-              }}
-              placeholder="Ej: 300 123 4567"
-              disabled={loading}
-            />
-          </div>
-
-          <div>
-            <Input
-              label="Número de documento"
-              value={`${documentType || 'CC'} ${documentNumber || ''}`}
-              disabled={true}
-              readOnly={true}
-              style={{ backgroundColor: '#F8FAFC', color: Colors.textSecondary }}
-            />
-            <p
-              style={{
-                fontSize: 11,
-                color: Colors.textMuted,
-                marginTop: 4,
-                margin: '4px 0 0',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-              }}>
-              <IoShieldCheckmarkOutline size={13} color="#059669" />
-              Tu documento es tu identificación única y no puede ser alterado.
-            </p>
-          </div>
-
-          <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+          {/* Botones de acción siempre visibles al pie del modal sin necesidad de hacer scroll */}
+          <div
+            style={{
+              padding: '14px 20px 18px',
+              borderTop: `1px solid ${Colors.border}`,
+              backgroundColor: '#FFFFFF',
+              display: 'flex',
+              gap: 10,
+              flexShrink: 0,
+            }}>
             <Button
               title="Cancelar"
               variant="secondary"

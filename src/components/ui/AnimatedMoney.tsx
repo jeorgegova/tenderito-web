@@ -4,14 +4,22 @@ import { FormatMoney } from '../../utils/format';
 interface AnimatedMoneyProps {
   value: number | string;
   style?: React.CSSProperties;
+  formatter?: (val: number) => string;
+  duration?: number;
+  className?: string;
 }
 
-export const AnimatedMoney = ({ value, style }: AnimatedMoneyProps) => {
+export const AnimatedMoney = ({
+  value,
+  style,
+  formatter,
+  duration = 1200,
+  className,
+}: AnimatedMoneyProps) => {
   const [display, setDisplay] = useState(0);
 
   useEffect(() => {
     const to = parseFloat(String(value)) || 0;
-    const duration = 1400;
     const start = Date.now();
     let raf: number;
 
@@ -30,10 +38,13 @@ export const AnimatedMoney = ({ value, style }: AnimatedMoneyProps) => {
 
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [value]);
+  }, [value, duration]);
+
+  const formattedText = formatter ? formatter(display) : FormatMoney(display);
 
   return (
     <span
+      className={className}
       style={{
         fontWeight: 'inherit',
         fontSize: 'inherit',
@@ -42,7 +53,7 @@ export const AnimatedMoney = ({ value, style }: AnimatedMoneyProps) => {
         letterSpacing: 'inherit',
         ...style,
       }}>
-      {FormatMoney(display)}
+      {formattedText}
     </span>
   );
 };

@@ -69,17 +69,21 @@ export function EditCustomerAliasLimitModal({
 
   return (
     <div
+      onClick={e => {
+        if (e.target === e.currentTarget) onClose();
+      }}
       style={{
         position: 'fixed',
         inset: 0,
         backgroundColor: 'rgba(15, 23, 42, 0.65)',
         backdropFilter: 'blur(5px)',
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         justifyContent: 'center',
         zIndex: 12000,
-        padding: 16,
+        padding: 'min(48px, 6vh) 16px 24px',
         boxSizing: 'border-box',
+        overflowY: 'auto',
       }}>
       <div
         style={{
@@ -87,13 +91,13 @@ export function EditCustomerAliasLimitModal({
           borderRadius: 24,
           width: '100%',
           maxWidth: 460,
-          maxHeight: '90vh',
+          maxHeight: 'calc(100vh - min(48px, 6vh) - 32px)',
           display: 'flex',
           flexDirection: 'column',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
           overflow: 'hidden',
         }}>
-        {/* Header del Modal */}
+        {/* Header del Modal (Fijo) */}
         <div
           style={{
             padding: '18px 20px',
@@ -101,6 +105,7 @@ export function EditCustomerAliasLimitModal({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            flexShrink: 0,
           }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div
@@ -140,81 +145,102 @@ export function EditCustomerAliasLimitModal({
           </button>
         </div>
 
-        {/* Contenido del Formulario */}
+        {/* Formulario con cuerpo scrollable y footer fijo */}
         <form
           onSubmit={handleSave}
           style={{
-            padding: 20,
-            overflowY: 'auto',
             display: 'flex',
             flexDirection: 'column',
-            gap: 14,
+            overflow: 'hidden',
+            flex: 1,
+            minHeight: 0,
           }}>
-          {error && (
-            <div
-              style={{
-                padding: '10px 14px',
-                borderRadius: Radius.md,
-                backgroundColor: '#FEE2E2',
-                color: '#991B1B',
-                fontSize: 13,
-                fontWeight: 600,
-              }}>
-              {error}
-            </div>
-          )}
-
-          <div>
-            <Input
-              label="Alias / Apodo en tu tienda"
-              value={alias}
-              onChange={e => setAlias(e.target.value)}
-              placeholder="Ej: Don Pedro, Vecina Clara"
-              disabled={loading}
-            />
-            <p style={{ fontSize: 11, color: Colors.textMuted, marginTop: 4, margin: '4px 0 0' }}>
-              Nombre personalizado con el que identificas a este cliente en tu tienda.
-            </p>
-          </div>
-
-          <div>
-            <Input
-              label="Tope de crédito permitido ($ COP)"
-              type="text"
-              value={
-                creditLimit
-                  ? `$ ${Number(creditLimit.replace(/[^0-9]/g, '')).toLocaleString('es-CO')}`
-                  : ''
-              }
-              onChange={e => {
-                const raw = e.target.value.replace(/[^0-9]/g, '');
-                setCreditLimit(raw);
-              }}
-              placeholder="$ 0 (sin tope máximo)"
-              disabled={loading}
-            />
-            <p style={{ fontSize: 11, color: Colors.textMuted, marginTop: 4, margin: '4px 0 0' }}>
-              Monto máximo permitido en compras fiadas simultáneas (deja en 0 para ilimitado).
-            </p>
-          </div>
-
+          {/* Cuerpo scrollable interior */}
           <div
             style={{
-              backgroundColor: '#F8FAFC',
-              border: `1px solid ${Colors.border}`,
-              borderRadius: Radius.md,
-              padding: 12,
+              padding: '18px 20px 24px',
+              overflowY: 'auto',
               display: 'flex',
-              alignItems: 'flex-start',
-              gap: 8,
+              flexDirection: 'column',
+              gap: 14,
+              flex: 1,
+              minHeight: 0,
             }}>
-            <IoInformationCircleOutline size={18} color={Colors.textSecondary} style={{ flexShrink: 0, marginTop: 2 }} />
-            <span style={{ fontSize: 12, color: Colors.textSecondary, lineHeight: 1.4 }}>
-              El <strong>nombre legal</strong> y <strong>número telefónico</strong> son datos personales administrados exclusivamente por el cliente desde su propia cuenta.
-            </span>
+            {error && (
+              <div
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: Radius.md,
+                  backgroundColor: '#FEE2E2',
+                  color: '#991B1B',
+                  fontSize: 13,
+                  fontWeight: 600,
+                }}>
+                {error}
+              </div>
+            )}
+
+            <div>
+              <Input
+                label="Alias / Apodo en tu tienda"
+                value={alias}
+                onChange={e => setAlias(e.target.value)}
+                placeholder="Ej: Don Pedro, Vecina Clara"
+                disabled={loading}
+              />
+              <p style={{ fontSize: 11, color: Colors.textMuted, marginTop: 4, margin: '4px 0 0' }}>
+                Nombre personalizado con el que identificas a este cliente en tu tienda.
+              </p>
+            </div>
+
+            <div>
+              <Input
+                label="Tope de crédito permitido ($ COP)"
+                type="text"
+                value={
+                  creditLimit
+                    ? `$ ${Number(creditLimit.replace(/[^0-9]/g, '')).toLocaleString('es-CO')}`
+                    : ''
+                }
+                onChange={e => {
+                  const raw = e.target.value.replace(/[^0-9]/g, '');
+                  setCreditLimit(raw);
+                }}
+                placeholder="$ 0 (sin tope máximo)"
+                disabled={loading}
+              />
+              <p style={{ fontSize: 11, color: Colors.textMuted, marginTop: 4, margin: '4px 0 0' }}>
+                Monto máximo permitido en compras fiadas simultáneas (deja en 0 para ilimitado).
+              </p>
+            </div>
+
+            <div
+              style={{
+                backgroundColor: '#F8FAFC',
+                border: `1px solid ${Colors.border}`,
+                borderRadius: Radius.md,
+                padding: 12,
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 8,
+              }}>
+              <IoInformationCircleOutline size={18} color={Colors.textSecondary} style={{ flexShrink: 0, marginTop: 2 }} />
+              <span style={{ fontSize: 12, color: Colors.textSecondary, lineHeight: 1.4 }}>
+                El <strong>nombre legal</strong> y <strong>número telefónico</strong> son datos personales administrados exclusivamente por el cliente desde su propia cuenta.
+              </span>
+            </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+          {/* Botones de acción siempre visibles al pie del modal sin necesidad de hacer scroll */}
+          <div
+            style={{
+              padding: '14px 20px 18px',
+              borderTop: `1px solid ${Colors.border}`,
+              backgroundColor: '#FFFFFF',
+              display: 'flex',
+              gap: 10,
+              flexShrink: 0,
+            }}>
             <Button
               title="Cancelar"
               variant="secondary"

@@ -46,7 +46,7 @@ export function getDeviceModelName(): string {
  * Obtiene la versión actual de la aplicación.
  */
 export function getAppVersion(): string {
-  return '1.0.4';
+  return '1.0.7';
 }
 
 /**

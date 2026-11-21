@@ -86,17 +86,21 @@ export function EditStoreModal({
 
   return (
     <div
+      onClick={e => {
+        if (e.target === e.currentTarget) onClose();
+      }}
       style={{
         position: 'fixed',
         inset: 0,
         backgroundColor: 'rgba(15, 23, 42, 0.65)',
         backdropFilter: 'blur(5px)',
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         justifyContent: 'center',
         zIndex: 12000,
-        padding: 16,
+        padding: 'min(48px, 6vh) 16px 24px',
         boxSizing: 'border-box',
+        overflowY: 'auto',
       }}>
       <div
         style={{
@@ -104,13 +108,13 @@ export function EditStoreModal({
           borderRadius: 24,
           width: '100%',
           maxWidth: 460,
-          maxHeight: '90vh',
+          maxHeight: 'calc(100vh - min(48px, 6vh) - 32px)',
           display: 'flex',
           flexDirection: 'column',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
           overflow: 'hidden',
         }}>
-        {/* Header del Modal */}
+        {/* Header del Modal (Fijo) */}
         <div
           style={{
             padding: '18px 20px',
@@ -118,6 +122,7 @@ export function EditStoreModal({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            flexShrink: 0,
           }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div
@@ -157,78 +162,99 @@ export function EditStoreModal({
           </button>
         </div>
 
-        {/* Contenido del Formulario */}
+        {/* Formulario con cuerpo scrollable y footer fijo */}
         <form
           onSubmit={handleSave}
           style={{
-            padding: 20,
-            overflowY: 'auto',
             display: 'flex',
             flexDirection: 'column',
-            gap: 14,
+            overflow: 'hidden',
+            flex: 1,
+            minHeight: 0,
           }}>
-          {error && (
-            <div
-              style={{
-                padding: '10px 14px',
-                borderRadius: Radius.md,
-                backgroundColor: '#FEE2E2',
-                color: '#991B1B',
-                fontSize: 13,
-                fontWeight: 600,
-              }}>
-              {error}
+          {/* Cuerpo scrollable interior */}
+          <div
+            style={{
+              padding: '18px 20px 24px',
+              overflowY: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 14,
+              flex: 1,
+              minHeight: 0,
+            }}>
+            {error && (
+              <div
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: Radius.md,
+                  backgroundColor: '#FEE2E2',
+                  color: '#991B1B',
+                  fontSize: 13,
+                  fontWeight: 600,
+                }}>
+                {error}
+              </div>
+            )}
+
+            <div>
+              <Input
+                label="Nombre de la tienda *"
+                value={storeName}
+                onChange={e => {
+                  setStoreName(e.target.value);
+                  if (error) setError(null);
+                }}
+                placeholder="Ej: Tienda Villa Mercedes"
+                disabled={loading}
+              />
             </div>
-          )}
 
-          <div>
-            <Input
-              label="Nombre de la tienda *"
-              value={storeName}
-              onChange={e => {
-                setStoreName(e.target.value);
-                if (error) setError(null);
-              }}
-              placeholder="Ej: Tienda Villa Mercedes"
-              disabled={loading}
-            />
+            <div>
+              <Input
+                label="Teléfono de contacto *"
+                type="tel"
+                value={phone}
+                onChange={e => {
+                  setPhone(e.target.value.replace(/[^0-9]/g, ''));
+                  if (error) setError(null);
+                }}
+                placeholder="Ej: 310 123 4567"
+                disabled={loading}
+              />
+            </div>
+
+            <div>
+              <Input
+                label="Tu nombre (Tendero)"
+                value={merchantName}
+                onChange={e => setMerchantName(e.target.value)}
+                placeholder="Ej: Jorge González"
+                disabled={loading}
+              />
+            </div>
+
+            <div>
+              <Input
+                label="Dirección del local (opcional)"
+                value={address}
+                onChange={e => setAddress(e.target.value)}
+                placeholder="Ej: Carrera 15 # 45-20"
+                disabled={loading}
+              />
+            </div>
           </div>
 
-          <div>
-            <Input
-              label="Teléfono de contacto *"
-              type="tel"
-              value={phone}
-              onChange={e => {
-                setPhone(e.target.value.replace(/[^0-9]/g, ''));
-                if (error) setError(null);
-              }}
-              placeholder="Ej: 310 123 4567"
-              disabled={loading}
-            />
-          </div>
-
-          <div>
-            <Input
-              label="Tu nombre (Tendero)"
-              value={merchantName}
-              onChange={e => setMerchantName(e.target.value)}
-              placeholder="Ej: Jorge González"
-              disabled={loading}
-            />
-          </div>
-
-          <div>
-            <Input
-              label="Dirección del local (opcional)"
-              value={address}
-              onChange={e => setAddress(e.target.value)}
-              placeholder="Ej: Carrera 15 # 45-20"
-              disabled={loading}
-            />
-          </div>
-
-          <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+          {/* Botones de acción siempre visibles al pie del modal sin necesidad de hacer scroll */}
+          <div
+            style={{
+              padding: '14px 20px 18px',
+              borderTop: `1px solid ${Colors.border}`,
+              backgroundColor: '#FFFFFF',
+              display: 'flex',
+              gap: 10,
+              flexShrink: 0,
+            }}>
             <Button
               title="Cancelar"
               variant="secondary"
