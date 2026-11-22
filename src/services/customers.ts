@@ -137,53 +137,18 @@ export async function fetchCustomerById(id: string): Promise<Customer> {
 }
 
 /**
- * Valida límite por plan antes de insertar o vincular un cliente.
+ * La creación y vinculación de clientes es ILIMITADA en todos los planes.
+ * El límite de la suscripción aplica exclusivamente a clientes con cartera activa (saldo > 0).
  */
 export async function canCreateCustomer(
-  planOrProfile?: SubscriptionPlan | string | Profile | null,
+  _planOrProfile?: SubscriptionPlan | string | Profile | null,
 ): Promise<{allowed: boolean; count: number; limit: number; effectivePlan: string}> {
-  try {
-    const activeStoreId = await getActiveStoreId();
-    const db = await getDbConnection();
-    let query = 'SELECT COUNT(*) as total FROM customers';
-    const params: any[] = [];
-    if (activeStoreId) {
-      query +=
-        ' WHERE store_id = ? OR store_id IS NULL OR store_id = "" OR store_id = "null"';
-      params.push(activeStoreId);
-    }
-    const rows = await getData(db, query, params);
-    const total = Number(rows[0]?.total || 0);
-
-    let effectivePlan = 'free';
-    if (typeof planOrProfile === 'object' && planOrProfile !== null) {
-      const status = calculateSubscriptionStatus(planOrProfile);
-      effectivePlan = status.effectivePlan;
-    } else if (typeof planOrProfile === 'string') {
-      effectivePlan = planOrProfile.toLowerCase();
-    }
-
-    // Buscar el límite en los planes locales parametrizables
-    let limit: number = (PLAN_LIMITS as any)[effectivePlan] ?? 10;
-    try {
-      const localPlans = await getLocalSubscriptionPlans(db);
-      const matched = localPlans.find(
-        p => p.id.toLowerCase() === effectivePlan,
-      );
-      if (matched && typeof matched.customer_limit === 'number') {
-        limit = matched.customer_limit;
-      }
-    } catch (_pErr) {}
-
-    return {
-      allowed: total < limit,
-      count: total,
-      limit,
-      effectivePlan,
-    };
-  } catch (_e) {
-    return {allowed: true, count: 0, limit: 10, effectivePlan: 'free'};
-  }
+  return {
+    allowed: true,
+    count: 0,
+    limit: 999999,
+    effectivePlan: 'unlimited',
+  };
 }
 
 /**

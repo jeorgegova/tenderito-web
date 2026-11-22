@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   IoStorefrontOutline,
@@ -11,6 +12,7 @@ import {
   IoAlertCircle,
   IoTime,
   IoPencilOutline,
+  IoWalletOutline,
 } from 'react-icons/io5';
 import { NotificationSettingsModal } from '../components/ui/NotificationSettingsModal';
 import { EditStoreModal } from '../components/ui/EditStoreModal';
@@ -40,6 +42,7 @@ import { MagnetTabBar } from '../components/ui/MagnetTabBar';
 import { fetchProfile } from '../services/profile';
 
 export function ProfileScreen() {
+  const navigate = useNavigate();
   const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
   const [isEditStoreOpen, setIsEditStoreOpen] = useState(false);
   const setProfile = useStore(s => s.setProfile);
@@ -75,6 +78,10 @@ export function ProfileScreen() {
   }, [data, setProfile]);
 
   const subStatus = calculateSubscriptionStatus(data as any);
+  const currentPlan = plans.find(
+    p => p.id.toLowerCase() === subStatus.effectivePlan.toLowerCase(),
+  );
+  const customerLimit = currentPlan?.customer_limit ?? (subStatus.effectivePlan === 'pro' ? 999999 : 10);
 
   async function handleSwitchStore(storeId: string) {
     if (storeId === currentStoreId) return;
@@ -508,6 +515,17 @@ export function ProfileScreen() {
               );
             })}
           </div>
+
+          {customerLimit < 999999 && (
+            <div style={{ marginTop: 12 }}>
+              <Button
+                title="Gestionar cartera activa"
+                variant="secondary"
+                onPress={() => navigate('/free-portfolio')}
+                icon={<IoWalletOutline size={20} color={Colors.primary} />}
+              />
+            </div>
+          )}
         </div>
 
         {/* Opción para instalar PWA si no está en modo standalone */}

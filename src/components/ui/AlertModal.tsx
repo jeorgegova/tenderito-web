@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
   IoInformationCircle,
   IoCheckmarkCircle,
@@ -133,7 +134,7 @@ export function AlertModal() {
 
   const isTwoButtons = buttons.length === 2 && buttons.every(b => b.text.length <= 15);
 
-  return (
+  const content = (
     <div
       style={{
         position: 'fixed',
@@ -147,7 +148,7 @@ export function AlertModal() {
         alignItems: 'center',
         justifyContent: 'center',
         padding: 20,
-        zIndex: 9999,
+        zIndex: 999999,
         animation: 'fadeIn 0.2s ease',
       }}
       onClick={(e) => {
@@ -263,4 +264,8 @@ export function AlertModal() {
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined'
+    ? createPortal(content, document.body)
+    : content;
 }

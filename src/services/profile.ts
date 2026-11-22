@@ -31,7 +31,7 @@ export async function fetchProfile(): Promise<Profile | null> {
       let storeQuery = supabase
         .from('stores')
         .select(
-          'id, store_name, phone, address, subscription_plan, subscription_start_date, subscription_end_date, subscription_status',
+          'id, store_name, phone, address, subscription_plan, subscription_start_date, subscription_end_date, subscription_status, grace_period_days',
         );
 
       if (activeStoreId) {
@@ -49,6 +49,19 @@ export async function fetchProfile(): Promise<Profile | null> {
             ? storeData.subscription_plan
             : data.subscription_plan || storeData.subscription_plan || 'free';
 
+        const profileEnd = data.subscription_end_date
+          ? new Date(data.subscription_end_date).getTime()
+          : 0;
+        const storeEnd = storeData.subscription_end_date
+          ? new Date(storeData.subscription_end_date).getTime()
+          : 0;
+        const bestEndDate =
+          storeEnd && profileEnd
+            ? storeEnd >= profileEnd
+              ? storeData.subscription_end_date
+              : data.subscription_end_date
+            : storeData.subscription_end_date || data.subscription_end_date;
+
         mergedProfile = {
           ...data,
           store_name: storeData.store_name || data.store_name,
@@ -57,10 +70,11 @@ export async function fetchProfile(): Promise<Profile | null> {
           subscription_plan: plan,
           subscription_start_date:
             storeData.subscription_start_date || data.subscription_start_date,
-          subscription_end_date:
-            storeData.subscription_end_date || data.subscription_end_date,
+          subscription_end_date: bestEndDate,
           subscription_status:
             storeData.subscription_status || data.subscription_status,
+          grace_period_days:
+            storeData.grace_period_days ?? data.grace_period_days ?? null,
         };
       }
     } catch (_storeErr) {}

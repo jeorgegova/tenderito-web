@@ -130,6 +130,11 @@ export function calculateSubscriptionStatus(
   profile: Profile | null,
   gracePeriodDays = DEFAULT_GRACE_PERIOD_DAYS,
 ): SubscriptionStatusInfo {
+  const effectiveGraceDays =
+    typeof profile?.grace_period_days === 'number' && Number.isFinite(profile.grace_period_days)
+      ? profile.grace_period_days
+      : gracePeriodDays;
+
   const planId = (profile?.subscription_plan ?? 'free').toLowerCase();
   const isFreePlan = planId === 'free';
 
@@ -222,10 +227,10 @@ export function calculateSubscriptionStatus(
 
   const statusStr = (profile?.subscription_status || '').toLowerCase();
   const isCancelled = statusStr === 'cancelled';
-  const isDowngradedToFree = isCancelled || (isExpired && daysDiff > gracePeriodDays);
-  const inGracePeriod = !isCancelled && isExpired && daysDiff <= gracePeriodDays;
+  const isDowngradedToFree = isCancelled || (isExpired && daysDiff > effectiveGraceDays);
+  const inGracePeriod = !isCancelled && isExpired && daysDiff <= effectiveGraceDays;
   const effectivePlan = isDowngradedToFree ? 'free' : planId;
-  const remainingGraceDays = inGracePeriod ? Math.max(0, gracePeriodDays - daysDiff) : 0;
+  const remainingGraceDays = inGracePeriod ? Math.max(0, effectiveGraceDays - daysDiff) : 0;
   const formattedEndDate = formatDateDisplay(endDate);
 
   return {

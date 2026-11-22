@@ -210,16 +210,6 @@ export function CreateCustomerModal({
       return;
     }
 
-    const check = await canCreateCustomer(profile);
-    if (!check.allowed) {
-      return showAlert({
-        title: 'Límite de clientes alcanzado',
-        message: `Tu plan ${check.effectivePlan.toUpperCase()} permite hasta ${check.limit} clientes y ya tienes ${check.count}. Pásate a un plan superior para seguir agregando clientes.`,
-        type: 'warning',
-        buttons: [{ text: 'Entendido', style: 'cancel' }],
-      });
-    }
-
     if (foundCustomer) {
       if (!documentNumber.trim()) {
         return showAlert('Faltan datos', 'Identificación es obligatoria');
