@@ -173,6 +173,10 @@ export function CustomerDetailScreen() {
   const [isEditAliasLimitOpen, setIsEditAliasLimitOpen] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
 
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [id]);
+
   const handleBack = () => {
     setIsLeaving(true);
     setTimeout(() => {

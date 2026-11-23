@@ -114,6 +114,7 @@ export interface Credit {
   created_at: string;
   created_by?: string | null;
   customers?: {
+    id?: string;
     name: string;
     alias: string | null;
     phone: string | null;

@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   IoReceiptOutline,
   IoStorefront,
@@ -175,6 +175,8 @@ export function CustomerHomeScreen() {
     setIsNotifModalOpen(true);
   };
 
+  const queryClient = useQueryClient();
+
   // Al cambiar o salir de la tienda seleccionada, restablecer filtros a mes actual
   const handleSelectStore = (storeId: string | null) => {
     setSelectedStoreId(storeId);
@@ -182,6 +184,10 @@ export function CustomerHomeScreen() {
     setSearchConcept('');
     setIsSearchOpen(false);
     setFilterType('all');
+    if (storeId) {
+      queryClient.invalidateQueries({ queryKey: ['customer-portal', storeId] });
+    }
+    window.scrollTo({ top: 0, behavior: 'instant' });
   };
 
   const { data, isLoading, isFetching, isError, refetch } = useQuery({

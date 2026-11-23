@@ -266,6 +266,11 @@ export async function notifyCustomerMovement(params: {
       `[notifyCustomerMovement] Iniciando notificación para cliente ${params.customerId} (tipo: ${params.type}, status: ${params.status || 'active'}, monto: ${params.amount})...`,
     );
 
+    const isCancelled = params.status === 'cancelled';
+    const eventType = isCancelled
+      ? (params.type === 'credit' ? 'credit_cancelled' : 'payment_cancelled')
+      : params.type;
+
     // 1. Broadcast instantáneo mediante Supabase Realtime (llega de inmediato a clientes conectados)
     try {
       const bcChannel = supabase.channel(`customer-realtime-${params.customerId}`);
@@ -276,9 +281,11 @@ export async function notifyCustomerMovement(params: {
             event: 'movement',
             payload: {
               type: params.type,
+              eventType,
               status: params.status || 'active',
               amount: params.amount,
               concept: params.concept,
+              notes: params.notes,
               storeId: params.storeId,
               movementId: params.movementId,
             },
@@ -295,9 +302,11 @@ export async function notifyCustomerMovement(params: {
               event: 'movement',
               payload: {
                 type: params.type,
+                eventType,
                 status: params.status || 'active',
                 amount: params.amount,
                 concept: params.concept,
+                notes: params.notes,
                 storeId: params.storeId,
                 movementId: params.movementId,
               },
@@ -311,6 +320,7 @@ export async function notifyCustomerMovement(params: {
 
     const payload = {
       body: {
+        eventType,
         table: params.type === 'payment' ? 'payments' : 'credits',
         record: {
           id: params.movementId,
