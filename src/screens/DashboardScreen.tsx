@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { resetScroll } from '../components/ui/ScrollToTop';
 import {
   IoWalletOutline,
   IoEye,
@@ -97,6 +98,10 @@ export function DashboardScreen() {
   const debtors = (customers.data ?? []).filter(
     customer => Number(customer.current_balance) > 0,
   );
+
+  useLayoutEffect(() => {
+    resetScroll();
+  }, []);
 
   return (
     <div
@@ -644,9 +649,8 @@ export function DashboardScreen() {
                       fontSize: 15,
                       fontWeight: 700,
                       color: Colors.text,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
+                      wordBreak: 'break-word',
+                      lineHeight: 1.25,
                     }}>
                     {customer.alias || customer.name}
                   </div>
@@ -674,54 +678,6 @@ export function DashboardScreen() {
               </Card>
             ))
         )}
-      </div>
-
-      {/* Botón flotante amigable: + Nuevo fiado (adaptado al ancho máximo del contenedor de la app) */}
-      <div
-        style={{
-          position: 'fixed',
-          bottom: 'calc(94px + env(safe-area-inset-bottom, 0px))',
-          left: 0,
-          right: 0,
-          display: 'flex',
-          justifyContent: 'center',
-          pointerEvents: 'none',
-          zIndex: 999,
-        }}>
-        <div
-          style={{
-            maxWidth: 520,
-            width: '100%',
-            display: 'flex',
-            justifyContent: 'flex-end',
-            paddingRight: 20,
-            boxSizing: 'border-box',
-          }}>
-          <button
-            type="button"
-            onClick={() => navigate('/new-credit')}
-            style={{
-              pointerEvents: 'auto',
-              backgroundColor: Colors.primary,
-              color: '#FFFFFF',
-              borderRadius: 28,
-              padding: '12px 20px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              boxShadow: '0 8px 24px rgba(255, 107, 0, 0.4)',
-              border: 'none',
-              fontSize: 15,
-              fontWeight: 800,
-              cursor: 'pointer',
-              transition: 'transform 0.15s',
-            }}
-            onMouseDown={e => (e.currentTarget.style.transform = 'scale(0.96)')}
-            onMouseUp={e => (e.currentTarget.style.transform = 'scale(1)')}>
-            <IoAddCircle size={22} color="#FFFFFF" />
-            <span>Nuevo fiado</span>
-          </button>
-        </div>
       </div>
     </div>
   );

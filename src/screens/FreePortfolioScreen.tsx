@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import { resetScroll } from '../components/ui/ScrollToTop';
 import {
   IoArrowBack,
   IoCheckmarkCircle,
@@ -25,6 +26,10 @@ export function FreePortfolioScreen() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  useLayoutEffect(() => {
+    resetScroll();
+  }, []);
 
   const statusQuery = useQuery({
     queryKey: ['free-portfolio'],

@@ -8,6 +8,7 @@ export interface HeaderProps {
   title: string;
   subtitle?: string;
   showCurve?: boolean;
+  curveVariant?: 'default' | 'profile';
   rightElement?: React.ReactNode;
   sessionName?: string;
   sessionRole?: string;
@@ -18,6 +19,7 @@ export function Header({
   title,
   subtitle,
   showCurve = false,
+  curveVariant = 'default',
   rightElement,
   sessionName,
   sessionRole,
@@ -49,44 +51,140 @@ export function Header({
         boxSizing: 'border-box',
       }}>
       {showCurve && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            right: 0,
-            width: 220,
-            height: 140,
-            overflow: 'hidden',
-            pointerEvents: 'none',
-            zIndex: 0,
-          }}>
+        curveVariant === 'profile' ? (
           <div
             style={{
               position: 'absolute',
-              top: -45,
-              right: -25,
-              width: 210,
+              top: 0,
+              right: 0,
+              width: 250,
               height: 155,
-              borderBottomLeftRadius: 110,
-              borderTopLeftRadius: 40,
-              backgroundColor: '#FFE4D0',
-              transform: 'rotate(-8deg)',
-            }}
-          />
+              overflow: 'hidden',
+              pointerEvents: 'none',
+              zIndex: 0,
+            }}>
+            {/* Cresta de ola secundaria (crea el efecto ondulado con doble curva) */}
+            <div
+              style={{
+                position: 'absolute',
+                top: -20,
+                right: 90,
+                width: 95,
+                height: 95,
+                borderRadius: 48,
+                backgroundColor: '#FFE4D0',
+                transform: 'rotate(8deg)',
+              }}
+            />
+            {/* Cresta de ola principal exterior */}
+            <div
+              style={{
+                position: 'absolute',
+                top: -40,
+                right: -20,
+                width: 220,
+                height: 145,
+                borderBottomLeftRadius: 135,
+                borderBottomRightRadius: 60,
+                borderTopLeftRadius: 50,
+                backgroundColor: '#FFE4D0',
+                transform: 'rotate(-12deg)',
+              }}
+            />
+            {/* Cresta interior secundaria naranja */}
+            <div
+              style={{
+                position: 'absolute',
+                top: -28,
+                right: 95,
+                width: 75,
+                height: 75,
+                borderRadius: 38,
+                backgroundColor: Colors.primary,
+                transform: 'rotate(6deg)',
+              }}
+            />
+            {/* Cresta interior principal naranja */}
+            <div
+              style={{
+                position: 'absolute',
+                top: -50,
+                right: -25,
+                width: 185,
+                height: 125,
+                borderBottomLeftRadius: 115,
+                borderBottomRightRadius: 50,
+                borderTopLeftRadius: 40,
+                backgroundColor: Colors.primary,
+                transform: 'rotate(-10deg)',
+              }}
+            />
+            {/* Gotitas orgánicas del ondulado */}
+            <div
+              style={{
+                position: 'absolute',
+                top: 108,
+                right: 155,
+                width: 9,
+                height: 9,
+                borderRadius: 4.5,
+                backgroundColor: '#FFE4D0',
+                opacity: 0.9,
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                top: 124,
+                right: 130,
+                width: 6,
+                height: 6,
+                borderRadius: 3,
+                backgroundColor: Colors.primary,
+                opacity: 0.85,
+              }}
+            />
+          </div>
+        ) : (
           <div
             style={{
               position: 'absolute',
-              top: -55,
-              right: -30,
-              width: 175,
-              height: 130,
-              borderBottomLeftRadius: 95,
-              borderTopLeftRadius: 30,
-              backgroundColor: Colors.primary,
-              transform: 'rotate(-6deg)',
-            }}
-          />
-        </div>
+              top: 0,
+              right: 0,
+              width: 220,
+              height: 140,
+              overflow: 'hidden',
+              pointerEvents: 'none',
+              zIndex: 0,
+            }}>
+            <div
+              style={{
+                position: 'absolute',
+                top: -45,
+                right: -25,
+                width: 210,
+                height: 155,
+                borderBottomLeftRadius: 110,
+                borderTopLeftRadius: 40,
+                backgroundColor: '#FFE4D0',
+                transform: 'rotate(-8deg)',
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                top: -55,
+                right: -30,
+                width: 175,
+                height: 130,
+                borderBottomLeftRadius: 95,
+                borderTopLeftRadius: 30,
+                backgroundColor: Colors.primary,
+                transform: 'rotate(-6deg)',
+              }}
+            />
+          </div>
+        )
       )}
 
       <div

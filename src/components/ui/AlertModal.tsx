@@ -132,7 +132,7 @@ export function AlertModal() {
     iconBg = '#FEF3C7';
   }
 
-  const isTwoButtons = buttons.length === 2 && buttons.every(b => b.text.length <= 15);
+  const isTwoButtons = buttons.length === 2 && buttons.every(b => b.text.length <= 12);
 
   const content = (
     <div
@@ -252,6 +252,9 @@ export function AlertModal() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   minHeight: 46,
+                  textAlign: 'center',
+                  lineHeight: '1.25',
+                  wordBreak: 'break-word',
                   transition: 'opacity 0.15s, transform 0.15s',
                 }}
                 onMouseDown={e => (e.currentTarget.style.transform = 'scale(0.98)')}

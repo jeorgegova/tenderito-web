@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import { resetScroll } from '../components/ui/ScrollToTop';
 import {
   IoArrowBack,
   IoTimeOutline,
@@ -25,6 +26,10 @@ export function ReportsScreen() {
   });
 
   const total = (data ?? []).reduce((sum, credit) => sum + Number(credit.amount), 0);
+
+  useLayoutEffect(() => {
+    resetScroll();
+  }, []);
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -207,9 +212,8 @@ export function ReportsScreen() {
                       fontSize: 15,
                       fontWeight: 700,
                       color: Colors.text,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
+                      wordBreak: 'break-word',
+                      lineHeight: 1.25,
                     }}>
                     {item.customers?.alias || item.customers?.name || 'Cliente'}
                   </div>

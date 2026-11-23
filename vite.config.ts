@@ -65,7 +65,7 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10MB para soportar sql-wasm
       },
       devOptions: {
-        enabled: true,
+        enabled: false,
       },
     }),
   ],

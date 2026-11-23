@@ -11,6 +11,7 @@ import {
   IoPersonOutline,
 } from 'react-icons/io5';
 import { Colors } from '../../theme';
+import { resetScroll } from './ScrollToTop';
 
 interface TabItem {
   name: string;
@@ -136,7 +137,14 @@ export function MagnetTabBar({ active, onPressItem }: MagnetTabBarProps) {
   }, [updatePill]);
 
   const handleTabClick = (tab: TabItem, idx: number) => {
-    if (activeIndex === idx) return;
+    if (activeIndex === idx) {
+      const panel = document.querySelector(`[data-tab-panel="${idx}"]`);
+      if (panel) {
+        panel.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+      return;
+    }
     setOptimisticIndex(idx);
     onPressItem?.();
     navigate(tab.path);

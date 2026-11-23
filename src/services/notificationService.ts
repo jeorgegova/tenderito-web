@@ -139,11 +139,7 @@ export async function getServiceWorkerRegistration(): Promise<ServiceWorkerRegis
     return await navigator.serviceWorker.ready;
   } catch (err) {
     console.warn('[notifications] Error resolviendo Service Worker Registration:', err);
-    try {
-      return await navigator.serviceWorker.ready;
-    } catch {
-      return null;
-    }
+    return null;
   }
 }
 

@@ -1,6 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useLayoutEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import { resetScroll } from '../components/ui/ScrollToTop';
 import {
   IoArrowUp,
   IoArrowDown,
@@ -143,6 +144,10 @@ export function StatsScreen() {
   const creditBarPct = totalPeriodFlow > 0 ? Math.round(((stats?.periodCreditsTotal ?? 0) / totalPeriodFlow) * 100) : 50;
   const paymentBarPct = totalPeriodFlow > 0 ? 100 - creditBarPct : 50;
 
+  useLayoutEffect(() => {
+    resetScroll();
+  }, []);
+
   return (
     <div
       style={{
@@ -276,7 +281,7 @@ export function StatsScreen() {
                   <div
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: '1fr 1fr',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
                       gap: 8,
                     }}>
                     {/* Dinero fiado */}
@@ -302,9 +307,7 @@ export function StatsScreen() {
                           fontSize: 16,
                           fontWeight: 900,
                           color: Colors.destructive,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
+                          wordBreak: 'break-word',
                         }}>
                         {formatCOP(stats?.periodCreditsTotal ?? 0)}
                       </div>
@@ -336,9 +339,7 @@ export function StatsScreen() {
                           fontSize: 16,
                           fontWeight: 900,
                           color: Colors.success,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
+                          wordBreak: 'break-word',
                         }}>
                         {formatCOP(stats?.periodPaymentsTotal ?? 0)}
                       </div>
@@ -358,6 +359,7 @@ export function StatsScreen() {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
+                      flexWrap: 'wrap',
                       gap: 8,
                     }}>
                     <div style={{ minWidth: 0 }}>
@@ -377,9 +379,7 @@ export function StatsScreen() {
                         fontWeight: 900,
                         color: '#B45309',
                         textAlign: 'right',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
+                        wordBreak: 'break-word',
                       }}>
                       {formatCOP(stats?.periodCreditsPendingTotal ?? 0)}
                     </div>

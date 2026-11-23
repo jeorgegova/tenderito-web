@@ -102,6 +102,7 @@ export function MagnetFilterBar<T extends string = string>({
   return (
     <div
       ref={trackRef}
+      data-horizontal-scroll={scrollable ? 'true' : undefined}
       style={{
         display: 'flex',
         flexDirection: 'row',

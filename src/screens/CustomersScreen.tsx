@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import { resetScroll } from '../components/ui/ScrollToTop';
 import {
   IoSearchOutline,
   IoPeopleOutline,
@@ -25,6 +26,12 @@ export function CustomersScreen() {
   const [balanceFilter, setBalanceFilter] = useState<'all' | 'owing' | 'clear'>('all');
   const [modal, setModal] = useState(false);
 
+  useEffect(() => {
+    const handleOpen = () => setModal(true);
+    window.addEventListener('tenderito-open-create-customer', handleOpen);
+    return () => window.removeEventListener('tenderito-open-create-customer', handleOpen);
+  }, []);
+
   const { data, refetch, isLoading } = useQuery({
     queryKey: ['customers'],
     queryFn: () => fetchCustomers(),
@@ -47,6 +54,10 @@ export function CustomersScreen() {
       );
     });
   }, [data, search, balanceFilter]);
+
+  useLayoutEffect(() => {
+    resetScroll();
+  }, []);
 
   return (
     <div
@@ -123,7 +134,10 @@ export function CustomersScreen() {
             return (
               <Card
                 key={item.id}
-                onClick={() => navigate(`/customers/${item.id}`)}
+                onClick={() => {
+                  resetScroll();
+                  navigate(`/customers/${item.id}`);
+                }}
                 style={{
                   padding: 16,
                   cursor: 'pointer',
@@ -137,6 +151,7 @@ export function CustomersScreen() {
                   style={{
                     display: 'flex',
                     alignItems: 'center',
+                    flexWrap: 'wrap',
                     gap: 12,
                   }}>
                   {/* Avatar */}
@@ -165,9 +180,8 @@ export function CustomersScreen() {
                           fontSize: 16,
                           fontWeight: 700,
                           color: Colors.text,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
+                          wordBreak: 'break-word',
+                          lineHeight: 1.25,
                         }}>
                         {item.alias || item.name}
                       </span>
@@ -228,54 +242,6 @@ export function CustomersScreen() {
             );
           })
         )}
-      </div>
-
-      {/* Botón flotante: + Nuevo cliente (adaptado al ancho máximo del contenedor de la app) */}
-      <div
-        style={{
-          position: 'fixed',
-          bottom: 'calc(94px + env(safe-area-inset-bottom, 0px))',
-          left: 0,
-          right: 0,
-          display: 'flex',
-          justifyContent: 'center',
-          pointerEvents: 'none',
-          zIndex: 999,
-        }}>
-        <div
-          style={{
-            maxWidth: 520,
-            width: '100%',
-            display: 'flex',
-            justifyContent: 'flex-end',
-            paddingRight: 20,
-            boxSizing: 'border-box',
-          }}>
-          <button
-            type="button"
-            onClick={() => setModal(true)}
-            style={{
-              pointerEvents: 'auto',
-              backgroundColor: Colors.primary,
-              color: '#FFFFFF',
-              borderRadius: 28,
-              padding: '12px 20px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              boxShadow: '0 8px 24px rgba(255, 107, 0, 0.4)',
-              border: 'none',
-              fontSize: 15,
-              fontWeight: 800,
-              cursor: 'pointer',
-              transition: 'transform 0.15s',
-            }}
-            onMouseDown={e => (e.currentTarget.style.transform = 'scale(0.96)')}
-            onMouseUp={e => (e.currentTarget.style.transform = 'scale(1)')}>
-            <IoAddCircle size={22} color="#FFFFFF" />
-            <span>Nuevo cliente</span>
-          </button>
-        </div>
       </div>
 
       <CreateCustomerModal

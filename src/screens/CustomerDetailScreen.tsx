@@ -1,6 +1,7 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { resetScroll } from '../components/ui/ScrollToTop';
 import {
   IoArrowBack,
   IoCall,
@@ -173,13 +174,21 @@ export function CustomerDetailScreen() {
   const [isEditAliasLimitOpen, setIsEditAliasLimitOpen] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
 
+  useLayoutEffect(() => {
+    resetScroll();
+  }, [id]);
+
   useEffect(() => {
-    window.scrollTo(0, 0);
+    resetScroll();
+    const rafId = requestAnimationFrame(() => resetScroll());
+    return () => cancelAnimationFrame(rafId);
   }, [id]);
 
   const handleBack = () => {
     setIsLeaving(true);
+    resetScroll();
     setTimeout(() => {
+      resetScroll();
       navigate(-1);
     }, 200);
   };
@@ -1449,7 +1458,7 @@ export function CustomerDetailScreen() {
                       opacity: isCancelled ? 0.72 : 1,
                     }}>
                     {/* Columna Fecha */}
-                    <div style={{ width: 80, flexShrink: 0 }}>
+                    <div style={{ minWidth: 72, maxWidth: 88, flexShrink: 0 }}>
                       <span
                         style={{
                           fontSize: 11,
@@ -1598,7 +1607,7 @@ export function CustomerDetailScreen() {
                     {/* Columna Monto */}
                     <div
                       style={{
-                        width: 82,
+                        minWidth: 84,
                         display: 'flex',
                         justifyContent: 'flex-end',
                         flexShrink: 0,
@@ -1710,6 +1719,8 @@ export function CustomerDetailScreen() {
                   flexDirection: 'row',
                   justifyContent: 'space-between',
                   alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: 6,
                 }}>
                 <span
                   style={{
@@ -1726,6 +1737,7 @@ export function CustomerDetailScreen() {
                     fontSize: 13,
                     fontWeight: 800,
                     color: Colors.destructive,
+                    whiteSpace: 'nowrap',
                   }}>
                   +{formatCOP(monthTotals.creditsSum)}
                 </span>
@@ -1737,6 +1749,8 @@ export function CustomerDetailScreen() {
                   flexDirection: 'row',
                   justifyContent: 'space-between',
                   alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: 6,
                 }}>
                 <span
                   style={{
@@ -1753,6 +1767,7 @@ export function CustomerDetailScreen() {
                     fontSize: 13,
                     fontWeight: 800,
                     color: '#15803D',
+                    whiteSpace: 'nowrap',
                   }}>
                   −{formatCOP(monthTotals.paymentsSum)}
                 </span>
@@ -1772,6 +1787,8 @@ export function CustomerDetailScreen() {
                   flexDirection: 'row',
                   justifyContent: 'space-between',
                   alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: 6,
                 }}>
                 <span
                   style={{
@@ -1786,6 +1803,7 @@ export function CustomerDetailScreen() {
                     fontSize: 16,
                     fontWeight: 900,
                     color: isPaid ? '#15803D' : Colors.destructive,
+                    whiteSpace: 'nowrap',
                   }}>
                   {formatCOP(currentBalance)}
                 </span>

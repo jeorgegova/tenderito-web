@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { resetScroll } from '../components/ui/ScrollToTop';
 import {
   IoArrowBack,
   IoSwapHorizontal,
@@ -129,6 +130,10 @@ export function NewCreditScreen() {
       cancelled = true;
     };
   }, [customer_id, profile, customers]);
+
+  useLayoutEffect(() => {
+    resetScroll();
+  }, []);
 
   const matchingCustomers = useMemo(() => {
     if (!customerSearch.trim()) return customers ?? [];
@@ -356,8 +361,10 @@ export function NewCreditScreen() {
                 backgroundColor: '#F8FAFC',
                 borderRadius: 14,
                 padding: '10px 12px',
+                flexWrap: 'wrap',
+                gap: 8,
               }}>
-              <div style={{ flex: 1, textAlign: 'center' }}>
+              <div style={{ flex: 1, minWidth: 80, textAlign: 'center' }}>
                 <div
                   style={{
                     fontSize: 10,
@@ -378,7 +385,7 @@ export function NewCreditScreen() {
                 </div>
               </div>
               <div style={{ width: 1, height: 24, backgroundColor: '#E2E8F0' }} />
-              <div style={{ flex: 1, textAlign: 'center' }}>
+              <div style={{ flex: 1, minWidth: 80, textAlign: 'center' }}>
                 <div
                   style={{
                     fontSize: 10,
@@ -395,7 +402,7 @@ export function NewCreditScreen() {
               {creditLimit > 0 ? (
                 <>
                   <div style={{ width: 1, height: 24, backgroundColor: '#E2E8F0' }} />
-                  <div style={{ flex: 1, textAlign: 'center' }}>
+                  <div style={{ flex: 1, minWidth: 80, textAlign: 'center' }}>
                     <div
                       style={{
                         fontSize: 10,

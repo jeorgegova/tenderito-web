@@ -547,6 +547,7 @@ export function DatePicker({
                     PLAZO RÁPIDO
                   </span>
                   <div
+                    data-horizontal-scroll="true"
                     style={{
                       display: 'flex',
                       flexDirection: 'row',
@@ -726,6 +727,7 @@ export function DatePicker({
                 {/* Resumen del plazo seleccionado */}
                 {tempSelected ? (
                   <div
+                    data-horizontal-scroll="true"
                     style={{
                       display: 'flex',
                       flexDirection: 'row',

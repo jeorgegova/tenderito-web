@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useLayoutEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { resetScroll } from '../components/ui/ScrollToTop';
 import {
   IoArrowBack,
   IoCheckmarkCircle,
@@ -61,6 +62,10 @@ export function NewPaymentScreen() {
     (currentBalance <= 0 || numericAmount > currentBalance);
   const remainingBalance = Math.max(0, currentBalance - numericAmount);
   const isTotalPayment = currentBalance > 0 && numericAmount === currentBalance;
+
+  useLayoutEffect(() => {
+    resetScroll();
+  }, []);
 
   const matchingCustomers = useMemo(() => {
     if (!customerSearch.trim()) return customers ?? [];

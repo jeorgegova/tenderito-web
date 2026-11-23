@@ -1,5 +1,6 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useLayoutEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { resetScroll } from '../components/ui/ScrollToTop';
 import {
   IoReceiptOutline,
   IoStorefront,
@@ -177,6 +178,10 @@ export function CustomerHomeScreen() {
 
   const queryClient = useQueryClient();
 
+  useLayoutEffect(() => {
+    resetScroll();
+  }, []);
+
   // Al cambiar o salir de la tienda seleccionada, restablecer filtros a mes actual
   const handleSelectStore = (storeId: string | null) => {
     setSelectedStoreId(storeId);
@@ -187,7 +192,7 @@ export function CustomerHomeScreen() {
     if (storeId) {
       queryClient.invalidateQueries({ queryKey: ['customer-portal', storeId] });
     }
-    window.scrollTo({ top: 0, behavior: 'instant' });
+    resetScroll();
   };
 
   const { data, isLoading, isFetching, isError, refetch } = useQuery({
@@ -1150,7 +1155,7 @@ export function CustomerHomeScreen() {
                         borderBottom: '1px solid #CFE0F1', // Línea azul del cuaderno
                       }}>
                     {/* Columna Fecha Compacta */}
-                    <div style={{ width: 76, flexShrink: 0 }}>
+                    <div style={{ minWidth: 72, maxWidth: 88, flexShrink: 0 }}>
                       <span
                         style={{
                           fontSize: 11,
@@ -1248,7 +1253,7 @@ export function CustomerHomeScreen() {
                     </div>
 
                     {/* Monto */}
-                    <div style={{ width: 78, textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ minWidth: 84, textAlign: 'right', flexShrink: 0 }}>
                       <span
                         style={{
                           fontSize: 13,
@@ -1293,28 +1298,28 @@ export function CustomerHomeScreen() {
                 flexDirection: 'column',
                 gap: 6,
               }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
                 <span style={{ fontSize: 12, fontWeight: 600, color: Colors.textSecondary }}>
                   {selectedMonth === 'all'
                     ? 'Total fiado acumulado:'
                     : `Total fiado en ${formatMonthLabel(selectedMonth)}:`}
                 </span>
-                <span style={{ fontSize: 13, fontWeight: 800, color: Colors.destructive }}>
+                <span style={{ fontSize: 13, fontWeight: 800, color: Colors.destructive, whiteSpace: 'nowrap' }}>
                   +{formatCOP(storeTotals.creditsSum)}
                 </span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
                 <span style={{ fontSize: 12, fontWeight: 600, color: Colors.textSecondary }}>
                   {selectedMonth === 'all'
                     ? 'Total que has abonado:'
                     : `Total abonado en ${formatMonthLabel(selectedMonth)}:`}
                 </span>
-                <span style={{ fontSize: 13, fontWeight: 800, color: '#15803D' }}>
+                <span style={{ fontSize: 13, fontWeight: 800, color: '#15803D', whiteSpace: 'nowrap' }}>
                   −{formatCOP(storeTotals.paymentsSum)}
                 </span>
               </div>
               <div style={{ height: 1, backgroundColor: '#CFE0F1', margin: '4px 0' }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
                 <span style={{ fontSize: 13, fontWeight: 800, color: Colors.text }}>
                   Saldo pendiente actual:
                 </span>
@@ -1323,6 +1328,7 @@ export function CustomerHomeScreen() {
                     fontSize: 16,
                     fontWeight: 900,
                     color: isPaid ? '#15803D' : Colors.destructive,
+                    whiteSpace: 'nowrap',
                   }}>
                   {formatCOP(currentBalance)}
                 </span>
@@ -1824,7 +1830,7 @@ export function CustomerHomeScreen() {
                     backgroundColor: '#FFFFFF',
                     boxShadow: '0 4px 10px rgba(20, 32, 51, 0.06)',
                   }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
                     {/* Icono de la tienda en círculo verde o rojo según saldo */}
                     <div
                       style={{
@@ -1850,9 +1856,8 @@ export function CustomerHomeScreen() {
                           fontSize: 16,
                           fontWeight: 800,
                           color: Colors.text,
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
+                          wordBreak: 'break-word',
+                          lineHeight: 1.25,
                         }}>
                         {storeName}
                       </div>
@@ -1881,14 +1886,11 @@ export function CustomerHomeScreen() {
                             color: Colors.textSecondary,
                             marginTop: 2,
                             fontWeight: 500,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
+                            wordBreak: 'break-word',
+                            lineHeight: 1.25,
                           }}>
-                          <IoLocationOutline size={12} color={Colors.destructive} />
-                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {store.address}
-                          </span>
+                          <IoLocationOutline size={12} color={Colors.destructive} style={{ flexShrink: 0 }} />
+                          <span>{store.address}</span>
                         </div>
                       )}
                     </div>

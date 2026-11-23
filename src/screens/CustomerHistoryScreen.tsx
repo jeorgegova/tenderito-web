@@ -1,5 +1,7 @@
+import { useLayoutEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { resetScroll } from '../components/ui/ScrollToTop';
 import {
   IoArrowBack,
   IoWalletOutline,
@@ -21,6 +23,10 @@ export function CustomerHistoryScreen() {
   const navigate = useNavigate();
   const location = useLocation();
   const initialCustomer = (location.state as any)?.customer;
+
+  useLayoutEffect(() => {
+    resetScroll();
+  }, []);
 
   const customer = useQuery({
     queryKey: ['customer', id],

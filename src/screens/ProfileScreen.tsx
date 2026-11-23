@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useLayoutEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { resetScroll } from '../components/ui/ScrollToTop';
 import {
   IoStorefrontOutline,
   IoLogOutOutline,
@@ -142,6 +143,10 @@ export function ProfileScreen() {
 
   const currentPlanId = ((data as any)?.subscription_plan ?? 'free').toLowerCase();
 
+  useLayoutEffect(() => {
+    resetScroll();
+  }, []);
+
   return (
     <div
       style={{
@@ -151,9 +156,9 @@ export function ProfileScreen() {
         paddingBottom: 'calc(140px + env(safe-area-inset-bottom, 0px))',
         overflowX: 'hidden',
       }}>
-      <DynamicBrandCurves position="top-left" />
+      <DynamicBrandCurves position="bottom-left" />
 
-      <Header title="Mi negocio" subtitle="Perfil y suscripción" showCurve />
+      <Header title="Mi negocio" subtitle="Perfil y suscripción" showCurve curveVariant="profile" />
 
       <div
         style={{

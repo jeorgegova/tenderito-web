@@ -12,6 +12,7 @@ import { Card } from '../components/ui/Card';
 import { DynamicBrandCurves } from '../components/ui/DynamicBrandCurves';
 import { Input } from '../components/ui/Input';
 import { showAlert } from '../utils/alert';
+import { showToast } from '../utils/toast';
 import { customerAuthEmail } from '../lib/customerAuth';
 import { supabase } from '../lib/supabase';
 import { findCustomerForActivation } from '../services/customerPortal';
@@ -187,9 +188,9 @@ export function CustomerRegisterScreen() {
         data: { user_type: 'customer', customer_id: customer.customer_id, phone },
       },
     });
-    setLoading(false);
 
     if (error || !data.user) {
+      setLoading(false);
       const errMsg = (error?.message || '').toLowerCase();
       if (
         errMsg.includes('already registered') ||
@@ -225,19 +226,43 @@ export function CustomerRegisterScreen() {
       });
     }
 
-    await supabase.auth.signOut();
-    showAlert({
-      title: 'Cuenta activada',
-      message: 'Ya puedes ingresar como cliente.',
-      type: 'success',
-      buttons: [
-        {
-          text: 'Ir al inicio',
-          onPress: () =>
-            navigate(`/login?role=customer&document=${encodeURIComponent(document.trim())}`),
-        },
-      ],
-    });
+    // Si signUp no devolvió sesión directa, autenticar con las credenciales ingresadas
+    if (!data.session) {
+      const { data: signInData, error: signInError } =
+        await supabase.auth.signInWithPassword({
+          email: customerAuthEmail(cleanDoc),
+          password,
+        });
+
+      setLoading(false);
+
+      if (signInError || !signInData.session) {
+        return showAlert({
+          title: 'Cuenta activada',
+          message:
+            'Tu cuenta ha sido activada correctamente. Por favor ingresa tu contraseña para acceder a tu perfil.',
+          type: 'info',
+          buttons: [
+            {
+              text: 'Iniciar sesión',
+              onPress: () =>
+                navigate(
+                  `/login?role=customer&document=${encodeURIComponent(cleanDoc)}`,
+                ),
+            },
+          ],
+        });
+      }
+    } else {
+      setLoading(false);
+    }
+
+    // Sesión establecida exitosamente: mostrar toast de bienvenida no bloqueante y entrar
+    showToast(
+      '¡Bienvenido a Tenderito!',
+      'Tu cuenta ha sido activada correctamente',
+    );
+    navigate('/');
   }
 
   return (
