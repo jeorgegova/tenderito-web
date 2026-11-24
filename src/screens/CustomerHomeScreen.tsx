@@ -42,6 +42,7 @@ import { confirmLogout, CUSTOMER_LOGOUT_MESSAGE } from '../lib/session';
 import { fetchCustomerPortal } from '../services/customerPortal';
 import { setupRealtimeCustomerAlerts } from '../services/notificationService';
 import { NotificationSettingsModal } from '../components/ui/NotificationSettingsModal';
+import { computeCreditPaymentStatuses } from '../utils/creditStatus';
 import { Colors, Radius, formatCOP } from '../theme';
 import {
   formatDateCompact,
@@ -304,6 +305,22 @@ export function CustomerHomeScreen() {
     });
     return { creditsSum, paymentsSum };
   }, [storeMovements]);
+
+  // Mapa de estados reales de pago ('paid' | 'partially_paid' | null) para las compras fiadas de la tienda
+  const creditStatusMap = useMemo(() => {
+    if (!selectedStoreId) return {};
+    const storeCredits = (data?.credits ?? []).filter(
+      (c: any) => c.store_id === selectedStoreId,
+    );
+    const storePayments = (data?.payments ?? []).filter(
+      (p: any) => p.store_id === selectedStoreId,
+    );
+    return computeCreditPaymentStatuses(
+      storeCredits,
+      storePayments,
+      selectedStore?.current_balance,
+    );
+  }, [data?.credits, data?.payments, selectedStoreId, selectedStore?.current_balance]);
 
   // Lista de meses disponibles para selección
   const availableMonths = useMemo(() => {
@@ -1143,6 +1160,8 @@ export function CustomerHomeScreen() {
                 {filteredStoreMovements.map(item => {
                   const isCredit = item.kind === 'credit';
                   const isCancelled = item.status === 'cancelled';
+                  const paymentTag = isCredit && !isCancelled ? (creditStatusMap[item.id] ?? null) : null;
+
                   return (
                     <div
                       key={item.id}
@@ -1153,7 +1172,45 @@ export function CustomerHomeScreen() {
                         backgroundColor: isCancelled ? '#F7F4EB' : 'transparent',
                         opacity: isCancelled ? 0.72 : 1,
                         borderBottom: '1px solid #CFE0F1', // Línea azul del cuaderno
+                        position: 'relative',
+                        overflow: 'hidden',
                       }}>
+                    {/* Cinta diagonal de esquina (Pagado / Abonado) */}
+                    {paymentTag && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          right: 0,
+                          width: 48,
+                          height: 48,
+                          overflow: 'hidden',
+                          pointerEvents: 'none',
+                          zIndex: 5,
+                        }}>
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: 9,
+                            right: -19,
+                            width: 70,
+                            height: 14,
+                            transform: 'rotate(45deg)',
+                            backgroundColor: paymentTag === 'paid' ? '#16A34A' : '#D97706',
+                            color: '#FFFFFF',
+                            fontSize: 7.5,
+                            fontWeight: 900,
+                            letterSpacing: '0.4px',
+                            textAlign: 'center',
+                            lineHeight: '14px',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.22)',
+                            textTransform: 'uppercase',
+                          }}>
+                          {paymentTag === 'paid' ? 'PAGADO' : 'ABONADO'}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Columna Fecha Compacta */}
                     <div style={{ minWidth: 72, maxWidth: 88, flexShrink: 0 }}>
                       <span

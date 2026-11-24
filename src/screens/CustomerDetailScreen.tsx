@@ -41,6 +41,7 @@ import { fetchCreditsByCustomer, voidMovement } from '../services/credits';
 import { fetchPaymentsByCustomer } from '../services/payments';
 import { canCreateCreditForCustomer } from '../services/portfolio';
 import { calculateSubscriptionStatus } from '../services/plans';
+import { computeCreditPaymentStatuses } from '../utils/creditStatus';
 import { queryClient } from '../lib/queryClient';
 import { useStore } from '../store/useStore';
 import { Colors, Radius, formatCOP } from '../theme';
@@ -212,6 +213,15 @@ export function CustomerDetailScreen() {
     queryFn: () => fetchPaymentsByCustomer(id!),
     enabled: Boolean(id),
   });
+
+  // Mapa de estados reales de pago ('paid' | 'partially_paid' | null) para cada compra fiada
+  const creditStatusMap = useMemo(() => {
+    return computeCreditPaymentStatuses(
+      credits.data ?? [],
+      payments.data ?? [],
+      customer.data?.current_balance,
+    );
+  }, [credits.data, payments.data, customer.data?.current_balance]);
 
   // Movimientos combinados y ordenados por fecha más reciente
   const allMovements = useMemo(() => {
@@ -1441,6 +1451,7 @@ export function CustomerDetailScreen() {
                 const isCancelled = item.status === 'cancelled';
                 const overdue =
                   isCredit && !isCancelled && isOverdueBogota(item.dueDate);
+                const paymentTag = isCredit && !isCancelled ? (creditStatusMap[item.id] ?? null) : null;
 
                 return (
                   <div
@@ -1456,7 +1467,45 @@ export function CustomerDetailScreen() {
                       borderBottom: '1px solid #CFE0F1',
                       boxSizing: 'border-box',
                       opacity: isCancelled ? 0.72 : 1,
+                      position: 'relative',
+                      overflow: 'hidden',
                     }}>
+                    {/* Cinta diagonal de esquina (Pagado / Abonado) */}
+                    {paymentTag && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          right: 0,
+                          width: 48,
+                          height: 48,
+                          overflow: 'hidden',
+                          pointerEvents: 'none',
+                          zIndex: 5,
+                        }}>
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: 9,
+                            right: -19,
+                            width: 70,
+                            height: 14,
+                            transform: 'rotate(45deg)',
+                            backgroundColor: paymentTag === 'paid' ? '#16A34A' : '#D97706',
+                            color: '#FFFFFF',
+                            fontSize: 7.5,
+                            fontWeight: 900,
+                            letterSpacing: '0.4px',
+                            textAlign: 'center',
+                            lineHeight: '14px',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.22)',
+                            textTransform: 'uppercase',
+                          }}>
+                          {paymentTag === 'paid' ? 'PAGADO' : 'ABONADO'}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Columna Fecha */}
                     <div style={{ minWidth: 72, maxWidth: 88, flexShrink: 0 }}>
                       <span

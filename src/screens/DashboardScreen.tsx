@@ -666,11 +666,11 @@ export function DashboardScreen() {
                     </span>
                   </div>
                 </div>
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                <div style={{ textAlign: 'right', flexShrink: 0, minWidth: 105, whiteSpace: 'nowrap' }}>
                   <div style={{ fontSize: 11, color: Colors.textMuted, fontWeight: 600 }}>
                     Te debe
                   </div>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: Colors.text }}>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: Colors.destructive }}>
                     {formatCOP(Number(customer.current_balance))}
                   </div>
                 </div>

@@ -1,8 +1,17 @@
-import React from 'react';
-import { IoPersonOutline, IoSyncOutline } from 'react-icons/io5';
+import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  IoPersonOutline,
+  IoSyncOutline,
+  IoChevronDown,
+  IoChevronForward,
+  IoPersonCircleOutline,
+  IoLogOutOutline,
+} from 'react-icons/io5';
 import { useStore } from '../../store/useStore';
 import { Colors } from '../../theme';
 import { useSync } from '../../hooks/useSync';
+import { confirmLogout } from '../../lib/session';
 
 export interface HeaderProps {
   title: string;
@@ -25,6 +34,23 @@ export function Header({
   sessionRole,
   showSyncButton = true,
 }: HeaderProps) {
+  const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [menuOpen]);
+
   const profile = useStore(s => s.profile);
   const activeName = sessionName || profile?.merchant_name;
   const activeRole = sessionRole || (profile ? 'Tendero' : '');
@@ -45,8 +71,8 @@ export function Header({
         padding: '16px 20px 12px',
         backgroundColor: 'transparent',
         position: 'relative',
-        zIndex: 1,
-        overflow: 'hidden',
+        zIndex: 10,
+        overflow: 'visible',
         width: '100%',
         boxSizing: 'border-box',
       }}>
@@ -225,37 +251,27 @@ export function Header({
           </div>
           <h1
             style={{
-              fontSize: 28,
+              fontSize: 'clamp(20px, 3.8vw, 26px)',
               fontWeight: 800,
               color: Colors.text,
-              letterSpacing: -0.8,
+              letterSpacing: -0.6,
               lineHeight: 1.2,
               margin: 0,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
             }}>
             {title}
           </h1>
-          {subtitle && (
-            <p
-              style={{
-                fontSize: 14,
-                color: Colors.textSecondary,
-                marginTop: 4,
-                fontWeight: 500,
-                letterSpacing: -0.1,
-                margin: '4px 0 0 0',
-              }}>
-              {subtitle}
-            </p>
-          )}
         </div>
         <div
           style={{
-            marginLeft: 12,
+            marginLeft: 8,
             alignSelf: 'flex-start',
             flexShrink: 0,
             display: 'flex',
             alignItems: 'center',
-            gap: 8,
+            gap: 6,
             position: 'relative',
             zIndex: 2,
           }}>
@@ -301,65 +317,269 @@ export function Header({
           {rightElement ? (
             rightElement
           ) : activeName ? (
-            <div
-              title={`Sesión iniciada como: ${activeName}${activeRole ? ` (${activeRole})` : ''}`}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                backgroundColor: '#FFFFFF',
-                border: `1.5px solid ${Colors.border}`,
-                padding: '6px 12px',
-                borderRadius: 24,
-                boxShadow: '0 2px 10px rgba(0, 0, 0, 0.05)',
-                maxWidth: 180,
-              }}>
-              <div
+            <div ref={menuRef} style={{ position: 'relative' }}>
+              <button
+                type="button"
+                onClick={() => setMenuOpen(prev => !prev)}
+                title={`Usuario: ${activeName}. Clic para abrir opciones`}
+                aria-haspopup="true"
+                aria-expanded={menuOpen}
                 style={{
-                  width: 26,
-                  height: 26,
-                  borderRadius: 13,
-                  backgroundColor: Colors.primaryLight,
-                  color: Colors.primary,
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
+                  gap: 8,
+                  backgroundColor: menuOpen ? '#FFF7F2' : '#FFFFFF',
+                  border: `1.5px solid ${menuOpen ? Colors.primary : Colors.border}`,
+                  padding: '6px 12px',
+                  borderRadius: 24,
+                  boxShadow: menuOpen
+                    ? '0 4px 14px rgba(249, 115, 22, 0.15)'
+                    : '0 2px 10px rgba(0, 0, 0, 0.05)',
+                  maxWidth: 155,
+                  cursor: 'pointer',
+                  outline: 'none',
+                  transition: 'all 0.2s ease',
+                  textAlign: 'left',
                 }}>
-                <IoPersonOutline size={14} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                {activeRole && (
+                <div
+                  style={{
+                    width: 26,
+                    height: 26,
+                    borderRadius: 13,
+                    backgroundColor: Colors.primaryLight,
+                    color: Colors.primary,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}>
+                  <IoPersonOutline size={14} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
+                  {activeRole && (
+                    <span
+                      style={{
+                        fontSize: 9,
+                        fontWeight: 800,
+                        color: Colors.primary,
+                        lineHeight: 1,
+                        textTransform: 'uppercase',
+                        letterSpacing: 0.5,
+                      }}>
+                      {activeRole}
+                    </span>
+                  )}
                   <span
                     style={{
-                      fontSize: 9,
+                      fontSize: 12,
                       fontWeight: 800,
-                      color: Colors.primary,
-                      lineHeight: 1,
-                      textTransform: 'uppercase',
-                      letterSpacing: 0.5,
+                      color: Colors.text,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      lineHeight: 1.2,
+                      marginTop: activeRole ? 2 : 0,
                     }}>
-                    {activeRole}
+                    {activeName}
                   </span>
-                )}
-                <span
+                </div>
+                <IoChevronDown
+                  size={12}
+                  color={menuOpen ? Colors.primary : Colors.textMuted}
                   style={{
-                    fontSize: 12,
-                    fontWeight: 800,
-                    color: Colors.text,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    lineHeight: 1.2,
-                    marginTop: activeRole ? 2 : 0,
+                    marginLeft: 2,
+                    flexShrink: 0,
+                    transform: menuOpen ? 'rotate(180deg)' : 'none',
+                    transition: 'transform 0.2s ease',
+                  }}
+                />
+              </button>
+
+              {/* Popover Dropdown Menu */}
+              {menuOpen && (
+                <div
+                  role="menu"
+                  style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 8px)',
+                    right: 0,
+                    width: 220,
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: 16,
+                    padding: 8,
+                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+                    border: `1px solid ${Colors.border}`,
+                    zIndex: 1000,
                   }}>
-                  {activeName}
-                </span>
-              </div>
+                  {/* Encabezado */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      padding: '8px 10px 10px',
+                    }}>
+                    <div
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 16,
+                        backgroundColor: Colors.primaryLight,
+                        color: Colors.primary,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}>
+                      <IoPersonOutline size={16} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 800,
+                          color: Colors.text,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}>
+                        {activeName}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 600,
+                          color: Colors.textSecondary,
+                          marginTop: 1,
+                        }}>
+                        {activeRole || 'Sesión activa'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ height: 1, backgroundColor: '#F1F5F9', margin: '4px 0' }} />
+
+                  {/* Opción 1: Perfil */}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      navigate('/profile');
+                    }}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      padding: '10px 10px',
+                      borderRadius: 10,
+                      border: 'none',
+                      backgroundColor: 'transparent',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'background-color 0.15s ease',
+                      outline: 'none',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F8FAFC')}
+                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
+                    <div
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 14,
+                        backgroundColor: Colors.primaryLight,
+                        color: Colors.primary,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}>
+                      <IoPersonCircleOutline size={18} />
+                    </div>
+                    <span
+                      style={{
+                        flex: 1,
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: Colors.text,
+                      }}>
+                      Perfil
+                    </span>
+                    <IoChevronForward size={14} color={Colors.textMuted} />
+                  </button>
+
+                  <div style={{ height: 1, backgroundColor: '#F1F5F9', margin: '4px 0' }} />
+
+                  {/* Opción 2: Cerrar sesión */}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      confirmLogout();
+                    }}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      padding: '10px 10px',
+                      borderRadius: 10,
+                      border: 'none',
+                      backgroundColor: 'transparent',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'background-color 0.15s ease',
+                      outline: 'none',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#FEF2F2')}
+                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
+                    <div
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 14,
+                        backgroundColor: '#FEE2E2',
+                        color: Colors.destructive,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}>
+                      <IoLogOutOutline size={18} />
+                    </div>
+                    <span
+                      style={{
+                        flex: 1,
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: Colors.destructive,
+                      }}>
+                      Cerrar sesión
+                    </span>
+                  </button>
+                </div>
+              )}
             </div>
           ) : null}
         </div>
       </div>
+      {subtitle && (
+        <p
+          style={{
+            fontSize: 13.5,
+            color: Colors.textSecondary,
+            marginTop: 4,
+            fontWeight: 500,
+            letterSpacing: -0.1,
+            margin: '4px 0 0 0',
+            position: 'relative',
+            zIndex: 1,
+          }}>
+          {subtitle}
+        </p>
+      )}
     </div>
   );
 }

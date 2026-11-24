@@ -155,13 +155,16 @@ export function MagnetTabBar({ active, onPressItem }: MagnetTabBarProps) {
       style={{
         position: 'fixed',
         bottom: 0,
-        left: 0,
-        right: 0,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: '100%',
+        maxWidth: 520,
         display: 'flex',
         justifyContent: 'center',
         padding: '0 16px max(6px, calc(env(safe-area-inset-bottom, 0px) - 10px))',
         pointerEvents: 'none',
         zIndex: 1000,
+        boxSizing: 'border-box',
       }}>
       <nav
         ref={navRef}

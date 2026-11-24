@@ -158,6 +158,7 @@ export function SwipeableTabsView() {
   return (
     <div
       ref={containerRef}
+      className="swipeable-tabs-container"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -165,11 +166,15 @@ export function SwipeableTabsView() {
       style={{
         position: 'fixed',
         top: 0,
-        left: 0,
-        right: 0,
         bottom: 0,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: '100%',
+        maxWidth: 520,
         overflow: 'hidden',
         touchAction: isDragging ? 'none' : 'pan-y',
+        backgroundColor: 'var(--background)',
+        boxShadow: '0 0 30px rgba(0, 0, 0, 0.05)',
       }}>
       {MAIN_TABS.map((tab, index) => {
         const offsetPercent = (index - activeIndex) * 100;
