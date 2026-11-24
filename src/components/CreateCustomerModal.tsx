@@ -10,6 +10,11 @@ import {
   IoArrowBack,
   IoWalletOutline,
   IoCallOutline,
+  IoShieldCheckmark,
+  IoThumbsUp,
+  IoAlertCircle,
+  IoWarning,
+  IoHelpCircleOutline,
 } from 'react-icons/io5';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -25,6 +30,7 @@ import {
   fetchGlobalCustomerHistory,
   getStoreBalance,
   getStoreLastMovement,
+  evaluateCustomerPaymentHabit,
 } from '../services/customers';
 import { fetchProfile } from '../services/profile';
 import { useStore } from '../store/useStore';
@@ -167,6 +173,11 @@ export function CreateCustomerModal({
   const totalHistoryBalance = historyStores.reduce(
     (sum: number, s: any) => sum + getStoreBalance(s, historyCredits, historyPayments),
     0,
+  );
+  const historyRating = evaluateCustomerPaymentHabit(
+    historyStores,
+    historyCredits,
+    historyPayments,
   );
 
   async function onCheckDocument() {
@@ -506,6 +517,173 @@ export function CreateCustomerModal({
                     </div>
                   </div>
                 </div>
+
+                {/* Valoración de hábitos de pago */}
+                {!historyQuery.isLoading && (
+                  <div
+                    style={{
+                      padding: 14,
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: Radius.md,
+                      border: `1.5px solid ${historyRating.borderColor}`,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 10,
+                    }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 10,
+                        flexWrap: 'wrap',
+                      }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                        <div
+                          style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 12,
+                            backgroundColor: historyRating.bgColor,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                          }}>
+                          {historyRating.tier === 'excellent' ? (
+                            <IoShieldCheckmark size={18} color={historyRating.color} />
+                          ) : historyRating.tier === 'good' ? (
+                            <IoThumbsUp size={17} color={historyRating.color} />
+                          ) : historyRating.tier === 'fair' ? (
+                            <IoAlertCircle size={18} color={historyRating.color} />
+                          ) : historyRating.tier === 'risk' ? (
+                            <IoWarning size={18} color={historyRating.color} />
+                          ) : (
+                            <IoHelpCircleOutline size={18} color={historyRating.color} />
+                          )}
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <div
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 800,
+                              letterSpacing: 0.7,
+                              color: Colors.textSecondary,
+                            }}>
+                            VALORACIÓN DE PAGO
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 15,
+                              fontWeight: 800,
+                              color: historyRating.color,
+                              marginTop: 1,
+                            }}>
+                            {historyRating.label}
+                          </div>
+                        </div>
+                      </div>
+
+                      {historyRating.score !== null && (
+                        <div
+                          style={{
+                            padding: '5px 10px',
+                            borderRadius: 999,
+                            backgroundColor: historyRating.bgColor,
+                            border: `1px solid ${historyRating.borderColor}`,
+                            color: historyRating.color,
+                            fontSize: 12,
+                            fontWeight: 800,
+                            flexShrink: 0,
+                          }}>
+                          {historyRating.score} / 100
+                        </div>
+                      )}
+                    </div>
+
+                    {historyRating.score !== null && (
+                      <div
+                        style={{
+                          width: '100%',
+                          height: 6,
+                          borderRadius: 999,
+                          backgroundColor: '#F1F5F9',
+                          overflow: 'hidden',
+                        }}>
+                        <div
+                          style={{
+                            width: `${historyRating.score}%`,
+                            height: '100%',
+                            borderRadius: 999,
+                            backgroundColor: historyRating.color,
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    <div style={{ fontSize: 12.5, color: Colors.textSecondary, lineHeight: 1.4 }}>
+                      {historyRating.description}
+                    </div>
+
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                        gap: 8,
+                      }}>
+                      <div
+                        style={{
+                          padding: '7px 9px',
+                          borderRadius: 10,
+                          backgroundColor: '#F8FAFC',
+                          border: `1px solid ${Colors.border}`,
+                        }}>
+                        <div style={{ fontSize: 9.5, fontWeight: 700, color: Colors.textMuted }}>
+                          ABONADO
+                        </div>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: Colors.text, marginTop: 2 }}>
+                          {historyRating.paymentPercentage}%
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          padding: '7px 9px',
+                          borderRadius: 10,
+                          backgroundColor: '#F8FAFC',
+                          border: `1px solid ${Colors.border}`,
+                        }}>
+                        <div style={{ fontSize: 9.5, fontWeight: 700, color: Colors.textMuted }}>
+                          ABONOS / FIADOS
+                        </div>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: Colors.text, marginTop: 2 }}>
+                          {historyRating.paymentsCount} / {historyRating.creditsCount}
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          padding: '7px 9px',
+                          borderRadius: 10,
+                          backgroundColor: '#F8FAFC',
+                          border: `1px solid ${Colors.border}`,
+                        }}>
+                        <div style={{ fontSize: 9.5, fontWeight: 700, color: Colors.textMuted }}>
+                          ATRASOS
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 12.5,
+                            fontWeight: 800,
+                            color: historyRating.overdueCount > 0 ? Colors.destructive : Colors.success,
+                            marginTop: 2,
+                          }}>
+                          {historyRating.overdueCount === 0
+                            ? 'Sin atrasos'
+                            : `${historyRating.overdueCount} vencido${historyRating.overdueCount === 1 ? '' : 's'}`}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <h4 style={{ fontSize: 15, fontWeight: 800, color: Colors.text, margin: '4px 0 0' }}>
                   Tiendas vinculadas

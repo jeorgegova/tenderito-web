@@ -211,6 +211,21 @@ export function LoginScreen() {
             }
             onPress={onLogin}
             disabled={loading}
+            leftElement={
+              loading ? (
+                <div
+                  className="spinner"
+                  style={{
+                    width: 18,
+                    height: 18,
+                    border: '2.5px solid rgba(255, 255, 255, 0.35)',
+                    borderTopColor: '#FFFFFF',
+                    borderRadius: '50%',
+                    animation: 'spin 0.8s linear infinite',
+                  }}
+                />
+              ) : undefined
+            }
           />
 
           {/* Divisor */}

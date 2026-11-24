@@ -23,6 +23,9 @@ import {
   IoLogoWhatsapp,
   IoTrashOutline,
   IoPersonOutline,
+  IoPersonCircleOutline,
+  IoLogOutOutline,
+  IoChevronDown,
   IoPencilOutline,
 } from 'react-icons/io5';
 import { EditCustomerAliasLimitModal } from '../components/ui/EditCustomerAliasLimitModal';
@@ -35,6 +38,7 @@ import { FooterMenu } from '../components/ui/FooterMenu';
 import { StoreHistoryLockNotice } from '../components/ui/StoreHistoryLockNotice';
 import { MagnetFilterBar } from '../components/ui/MagnetFilterBar';
 import { showAlert } from '../components/ui/AlertModal';
+import { confirmLogout } from '../lib/session';
 import { fetchCustomerById } from '../services/customers';
 import { fetchProfile } from '../services/profile';
 import { fetchCreditsByCustomer, voidMovement } from '../services/credits';
@@ -174,6 +178,19 @@ export function CustomerDetailScreen() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isEditAliasLimitOpen, setIsEditAliasLimitOpen] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    window.addEventListener('mousedown', handleClickOutside);
+    return () => window.removeEventListener('mousedown', handleClickOutside);
+  }, [menuOpen]);
 
   useLayoutEffect(() => {
     resetScroll();
@@ -502,7 +519,7 @@ export function CustomerDetailScreen() {
           position: 'sticky',
           top: 0,
           zIndex: 100,
-          overflow: 'hidden',
+          overflow: 'visible',
           transform: isLeaving
             ? 'translateY(-22px) scaleY(0.9)'
             : 'translateY(0) scaleY(1)',
@@ -521,6 +538,8 @@ export function CustomerDetailScreen() {
             left: 0,
             right: 0,
             bottom: 0,
+            borderBottomLeftRadius: 24,
+            borderBottomRightRadius: 24,
             pointerEvents: 'none',
             overflow: 'hidden',
             zIndex: 0,
@@ -701,64 +720,269 @@ export function CustomerDetailScreen() {
           )}
 
           {profile?.merchant_name && (
-            <div
-              title={`Sesión iniciada como: ${profile.merchant_name} (Tendero)`}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                backgroundColor: '#FFFFFF',
-                border: `1.5px solid ${Colors.border}`,
-                padding: '4px 10px',
-                borderRadius: 20,
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
-                maxWidth: 160,
-              }}>
-              <div
+            <div ref={menuRef} style={{ position: 'relative' }}>
+              <button
+                type="button"
+                onClick={() => setMenuOpen(prev => !prev)}
+                title={`Sesión iniciada como: ${profile.merchant_name} (Tendero)`}
                 style={{
-                  width: 22,
-                  height: 22,
-                  borderRadius: 11,
-                  backgroundColor: Colors.primaryLight,
-                  color: Colors.primary,
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
+                  gap: 6,
+                  backgroundColor: menuOpen ? '#FFFBF8' : '#FFFFFF',
+                  border: `1.5px solid ${menuOpen ? Colors.primary : Colors.border}`,
+                  padding: '4px 8px 4px 10px',
+                  borderRadius: 20,
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+                  maxWidth: 165,
+                  cursor: 'pointer',
+                  outline: 'none',
+                  transition: 'all 0.15s ease',
                 }}>
-                <IoPersonOutline size={12} />
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  minWidth: 0,
-                }}>
-                <span
+                <div
                   style={{
-                    fontSize: 8,
-                    fontWeight: 800,
+                    width: 22,
+                    height: 22,
+                    borderRadius: 11,
+                    backgroundColor: Colors.primaryLight,
                     color: Colors.primary,
-                    lineHeight: 1,
-                    textTransform: 'uppercase',
-                    letterSpacing: 0.5,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
                   }}>
-                  TENDERO
-                </span>
-                <span
+                  <IoPersonOutline size={12} />
+                </div>
+                <div
                   style={{
-                    fontSize: 11,
-                    fontWeight: 800,
-                    color: Colors.text,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    lineHeight: 1.2,
-                    marginTop: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    minWidth: 0,
+                    textAlign: 'left',
                   }}>
-                  {profile.merchant_name}
-                </span>
-              </div>
+                  <span
+                    style={{
+                      fontSize: 8,
+                      fontWeight: 800,
+                      color: Colors.primary,
+                      lineHeight: 1,
+                      textTransform: 'uppercase',
+                      letterSpacing: 0.5,
+                    }}>
+                    TENDERO
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 800,
+                      color: Colors.text,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      lineHeight: 1.2,
+                      marginTop: 1,
+                    }}>
+                    {profile.merchant_name}
+                  </span>
+                </div>
+                <IoChevronDown
+                  size={11}
+                  color={Colors.textMuted}
+                  style={{
+                    transform: menuOpen ? 'rotate(180deg)' : 'none',
+                    transition: 'transform 0.15s ease',
+                    flexShrink: 0,
+                    marginLeft: 2,
+                  }}
+                />
+              </button>
+
+              {/* Menú flotante al dar clic en el nombre de usuario (Tendero) */}
+              {menuOpen && (
+                <div
+                  role="menu"
+                  style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 8px)',
+                    right: 0,
+                    width: 220,
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: 16,
+                    padding: 8,
+                    boxShadow:
+                      '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+                    border: `1px solid ${Colors.border}`,
+                    zIndex: 1000,
+                  }}>
+                  {/* Encabezado */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      padding: '8px 10px 10px',
+                    }}>
+                    <div
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 16,
+                        backgroundColor: Colors.primaryLight,
+                        color: Colors.primary,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}>
+                      <IoPersonOutline size={16} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 800,
+                          color: Colors.text,
+                          lineHeight: '16px',
+                          wordBreak: 'break-word',
+                        }}>
+                        {profile.merchant_name}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 600,
+                          color: Colors.textSecondary,
+                          marginTop: 1,
+                        }}>
+                        {profile.store_name || 'Tendero'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      height: 1,
+                      backgroundColor: '#F1F5F9',
+                      margin: '4px 0',
+                    }}
+                  />
+
+                  {/* Opción 1: Perfil */}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      navigate('/profile');
+                    }}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      padding: '10px 10px',
+                      borderRadius: 10,
+                      border: 'none',
+                      backgroundColor: 'transparent',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'background-color 0.15s ease',
+                      outline: 'none',
+                    }}
+                    onMouseEnter={e =>
+                      (e.currentTarget.style.backgroundColor = '#F8FAFC')
+                    }
+                    onMouseLeave={e =>
+                      (e.currentTarget.style.backgroundColor = 'transparent')
+                    }>
+                    <div
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 14,
+                        backgroundColor: Colors.primaryLight,
+                        color: Colors.primary,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}>
+                      <IoPersonCircleOutline size={18} />
+                    </div>
+                    <span
+                      style={{
+                        flex: 1,
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: Colors.text,
+                      }}>
+                      Perfil
+                    </span>
+                    <IoChevronForward size={14} color={Colors.textMuted} />
+                  </button>
+
+                  <div
+                    style={{
+                      height: 1,
+                      backgroundColor: '#F1F5F9',
+                      margin: '4px 0',
+                    }}
+                  />
+
+                  {/* Opción 2: Cerrar sesión */}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      confirmLogout();
+                    }}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      padding: '10px 10px',
+                      borderRadius: 10,
+                      border: 'none',
+                      backgroundColor: 'transparent',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'background-color 0.15s ease',
+                      outline: 'none',
+                    }}
+                    onMouseEnter={e =>
+                      (e.currentTarget.style.backgroundColor = '#FEF2F2')
+                    }
+                    onMouseLeave={e =>
+                      (e.currentTarget.style.backgroundColor = 'transparent')
+                    }>
+                    <div
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 14,
+                        backgroundColor: '#FEE2E2',
+                        color: Colors.destructive,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}>
+                      <IoLogOutOutline size={18} />
+                    </div>
+                    <span
+                      style={{
+                        flex: 1,
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: Colors.destructive,
+                      }}>
+                      Cerrar sesión
+                    </span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -1524,14 +1748,44 @@ export function CustomerDetailScreen() {
                     <div style={{ flex: 1, padding: '0 6px', minWidth: 0 }}>
                       <div
                         style={{
-                          fontSize: 12.5,
-                          fontWeight: 700,
-                          color: isCancelled ? '#94A3B8' : Colors.text,
-                          textDecoration: isCancelled ? 'line-through' : 'none',
-                          lineHeight: '17px',
-                          wordBreak: 'break-word',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          flexWrap: 'wrap',
                         }}>
-                        {item.title}
+                        <span
+                          style={{
+                            fontSize: 12.5,
+                            fontWeight: 700,
+                            color: isCancelled ? '#94A3B8' : Colors.text,
+                            textDecoration: isCancelled ? 'line-through' : 'none',
+                            lineHeight: '17px',
+                            wordBreak: 'break-word',
+                          }}>
+                          {item.title}
+                        </span>
+                        {isCancelled && (
+                          <div
+                            style={{
+                              padding: '2px 7px',
+                              borderRadius: 4,
+                              backgroundColor: '#E2E8F0',
+                              border: '1px solid #CBD5E1',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              flexShrink: 0,
+                            }}>
+                            <span
+                              style={{
+                                fontSize: 10,
+                                fontWeight: 800,
+                                color: '#64748B',
+                                lineHeight: '14px',
+                              }}>
+                              Cancelado
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       <div
@@ -1544,46 +1798,26 @@ export function CustomerDetailScreen() {
                           flexWrap: 'wrap',
                         }}>
                         {isCancelled ? (
-                          <>
-                            <div
+                          <div
+                            style={{
+                              padding: '2px 6px',
+                              borderRadius: 4,
+                              backgroundColor: '#F1F5F9',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                            }}>
+                            <span
                               style={{
-                                padding: '2px 7px',
-                                borderRadius: 4,
-                                backgroundColor: '#E2E8F0',
-                                border: '1px solid #CBD5E1',
-                                display: 'inline-flex',
-                                alignItems: 'center',
+                                fontSize: 10,
+                                fontWeight: 700,
+                                color: '#94A3B8',
+                                textDecoration: 'line-through',
                               }}>
-                              <span
-                                style={{
-                                  fontSize: 10,
-                                  fontWeight: 800,
-                                  color: '#64748B',
-                                }}>
-                                Cancelado
-                              </span>
-                            </div>
-                            <div
-                              style={{
-                                padding: '2px 6px',
-                                borderRadius: 4,
-                                backgroundColor: '#F1F5F9',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                              }}>
-                              <span
-                                style={{
-                                  fontSize: 10,
-                                  fontWeight: 700,
-                                  color: '#94A3B8',
-                                  textDecoration: 'line-through',
-                                }}>
-                                {isCredit
-                                  ? 'Compra fiada (+)'
-                                  : 'Abono recibido (-)'}
-                              </span>
-                            </div>
-                          </>
+                              {isCredit
+                                ? 'Compra fiada (+)'
+                                : 'Abono recibido (-)'}
+                            </span>
+                          </div>
                         ) : (
                           <div
                             style={{

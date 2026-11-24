@@ -219,19 +219,13 @@ export function DatePicker({
       nextQuincenaDate.getDate(),
     );
 
-    // Fin de mes (último día del mes)
+    // Fin de mes: siempre el último día del mes en curso
     const endOfThisMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
     const endOfThisMonthYmd = formatYMD(
       endOfThisMonth.getFullYear(),
       endOfThisMonth.getMonth(),
       endOfThisMonth.getDate(),
     );
-
-    // Si la próxima quincena ya coincide con el fin de este mes, o faltan <= 2 días, apuntar al fin del siguiente mes
-    const targetEndOfMonth =
-      quincenaYmd === endOfThisMonthYmd || endOfThisMonth.getDate() - currentDay <= 2
-        ? new Date(today.getFullYear(), today.getMonth() + 2, 0)
-        : endOfThisMonth;
 
     return [
       {
@@ -244,11 +238,7 @@ export function DatePicker({
       },
       {
         label: 'Fin de mes',
-        ymd: formatYMD(
-          targetEndOfMonth.getFullYear(),
-          targetEndOfMonth.getMonth(),
-          targetEndOfMonth.getDate(),
-        ),
+        ymd: endOfThisMonthYmd,
       },
     ];
   }, []);
@@ -493,6 +483,7 @@ export function DatePicker({
                   justifyContent: 'space-between',
                   paddingBottom: 14,
                   borderBottom: `1px solid ${Colors.border}`,
+                  flexShrink: 0,
                 }}>
                 <div>
                   <div style={{ fontSize: 18, fontWeight: 800, color: Colors.text }}>
@@ -766,20 +757,39 @@ export function DatePicker({
                   display: 'flex',
                   flexDirection: 'row',
                   alignItems: 'center',
-                  gap: 10,
-                  paddingTop: 12,
+                  gap: 12,
+                  paddingTop: 14,
                   borderTop: `1px solid ${Colors.border}`,
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  flexShrink: 0,
                 }}>
                 {tempSelected ? (
-                  <Button
-                    title="Quitar fecha"
-                    variant="ghost"
-                    onPress={handleClear}
-                    style={{ padding: '0 12px', fontSize: 13 }}
-                  />
+                  <button
+                    type="button"
+                    onClick={handleClear}
+                    style={{
+                      height: 48,
+                      padding: '0 14px',
+                      color: Colors.primary,
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      fontSize: 14,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
+                      borderRadius: Radius.md,
+                      transition: 'background-color 0.15s ease',
+                      outline: 'none',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = Colors.primaryLight)}
+                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
+                    Quitar fecha
+                  </button>
                 ) : null}
 
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: 1, minWidth: 140 }}>
                   <Button
                     title={tempSelected ? 'Guardar fecha' : 'Sin fecha fija'}
                     variant={tempSelected ? 'primary' : 'secondary'}

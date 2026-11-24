@@ -154,7 +154,7 @@ export function ProfileScreen() {
         backgroundColor: Colors.background,
         position: 'relative',
         paddingBottom: 'calc(140px + env(safe-area-inset-bottom, 0px))',
-        overflowX: 'hidden',
+        overflowX: 'clip',
       }}>
       <DynamicBrandCurves position="bottom-left" />
 

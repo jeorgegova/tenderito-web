@@ -155,7 +155,7 @@ export function StatsScreen() {
         backgroundColor: Colors.background,
         position: 'relative',
         paddingBottom: 'calc(140px + env(safe-area-inset-bottom, 0px))',
-        overflowX: 'hidden',
+        overflowX: 'clip',
       }}>
       <DynamicBrandCurves position="bottom-right" />
 
@@ -187,7 +187,7 @@ export function StatsScreen() {
                 1. PRIMERA SECCIÓN: ASÍ ESTÁ TU NEGOCIO
                ══════════════════════════════════════════════════════════ */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
                 <span style={{ fontSize: 13, fontWeight: 900, color: Colors.primaryDark, letterSpacing: '0.8px', textTransform: 'uppercase' }}>
                   1. Así está tu negocio
                 </span>
@@ -259,7 +259,7 @@ export function StatsScreen() {
               <Card style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14, borderRadius: 20 }}>
                 {/* Selector de periodo directamente asociado a los movimientos */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
                     <span style={{ fontSize: 12, fontWeight: 800, color: Colors.text, letterSpacing: 0.5 }}>
                       MOVIMIENTOS EN EL PERÍODO
                     </span>
@@ -388,7 +388,7 @@ export function StatsScreen() {
 
                 {/* Barra comparativa sencilla: Dinero fiado vs Dinero recuperado */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 4 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
                     <span style={{ fontSize: 12, fontWeight: 700, color: Colors.text }}>
                       Relación: Fiado vs Recuperado
                     </span>
@@ -473,7 +473,7 @@ export function StatsScreen() {
                 2. SEGUNDA SECCIÓN: ATENCIÓN A TUS CLIENTES
                ══════════════════════════════════════════════════════════ */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
                 <span style={{ fontSize: 13, fontWeight: 900, color: Colors.primaryDark, letterSpacing: '0.8px', textTransform: 'uppercase' }}>
                   2. Atención a tus clientes
                 </span>
@@ -610,7 +610,7 @@ export function StatsScreen() {
                 3. TERCERA SECCIÓN: ESTADÍSTICAS POR CLIENTES
                ══════════════════════════════════════════════════════════ */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
                 <span style={{ fontSize: 13, fontWeight: 900, color: Colors.primaryDark, letterSpacing: '0.8px', textTransform: 'uppercase' }}>
                   3. Estadísticas por clientes
                 </span>
@@ -682,7 +682,7 @@ export function StatsScreen() {
 
               {/* Indicadores Consolidados de los clientes seleccionados */}
               <Card style={{ padding: 16, borderRadius: 20 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
                   <span style={{ fontSize: 12, fontWeight: 800, color: Colors.text, letterSpacing: 0.5 }}>
                     {selectedIds.length === 0
                       ? 'RESUMEN GENERAL DE CLIENTES'
@@ -768,7 +768,7 @@ export function StatsScreen() {
 
               {/* Filtro rápido por estado (Chips magnéticos) */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
                   <span style={{ fontSize: 14, fontWeight: 800, color: Colors.text }}>
                     Listado de clientes
                   </span>

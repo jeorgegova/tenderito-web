@@ -7,6 +7,11 @@ import {
   IoWalletOutline,
   IoStorefrontOutline,
   IoCallOutline,
+  IoShieldCheckmark,
+  IoThumbsUp,
+  IoAlertCircle,
+  IoWarning,
+  IoHelpCircleOutline,
 } from 'react-icons/io5';
 import { Card } from '../components/ui/Card';
 import {
@@ -14,6 +19,7 @@ import {
   fetchCustomerById,
   getStoreBalance,
   getStoreLastMovement,
+  evaluateCustomerPaymentHabit,
 } from '../services/customers';
 import { Colors, formatCOP } from '../theme';
 import { DynamicBrandCurves } from '../components/ui/DynamicBrandCurves';
@@ -49,6 +55,22 @@ export function CustomerHistoryScreen() {
     (sum: number, s: any) => sum + getStoreBalance(s, credits, payments),
     0,
   );
+  const paymentRating = evaluateCustomerPaymentHabit(stores, credits, payments);
+
+  const renderRatingIcon = () => {
+    switch (paymentRating.tier) {
+      case 'excellent':
+        return <IoShieldCheckmark size={20} color={paymentRating.color} />;
+      case 'good':
+        return <IoThumbsUp size={18} color={paymentRating.color} />;
+      case 'fair':
+        return <IoAlertCircle size={20} color={paymentRating.color} />;
+      case 'risk':
+        return <IoWarning size={20} color={paymentRating.color} />;
+      default:
+        return <IoHelpCircleOutline size={20} color={paymentRating.color} />;
+    }
+  };
 
   const customerData = customer.data || initialCustomer || (history.data as any)?.customer;
   const displayName = customerData?.alias || customerData?.name || (customer.isLoading ? 'Cargando…' : 'Cliente');
@@ -65,9 +87,9 @@ export function CustomerHistoryScreen() {
         backgroundColor: Colors.background,
         position: 'relative',
         paddingBottom: 40,
-        overflowX: 'hidden',
+        overflowX: 'clip',
       }}>
-      <DynamicBrandCurves position="top-right" />
+      <DynamicBrandCurves position="bottom-left" />
 
       {/* Header */}
       <div
@@ -76,7 +98,10 @@ export function CustomerHistoryScreen() {
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '16px 20px',
-          borderBottom: `1px solid ${Colors.border}`,
+          borderBottom: '1px solid #F1F5F9',
+          borderBottomLeftRadius: 24,
+          borderBottomRightRadius: 24,
+          boxShadow: '0 4px 14px rgba(0, 0, 0, 0.05)',
           backgroundColor: '#FFFFFF',
           position: 'sticky',
           top: 0,
@@ -185,6 +210,165 @@ export function CustomerHistoryScreen() {
             </div>
           </div>
         </Card>
+
+        {/* Valoración de hábitos de pago */}
+        {!history.isLoading && (
+          <Card
+            style={{
+              padding: 16,
+              backgroundColor: '#FFFFFF',
+              border: `1.5px solid ${paymentRating.borderColor}`,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 12,
+            }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 10,
+                flexWrap: 'wrap',
+              }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                <div
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 14,
+                    backgroundColor: paymentRating.bgColor,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}>
+                  {renderRatingIcon()}
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 800,
+                      letterSpacing: 0.7,
+                      color: Colors.textSecondary,
+                    }}>
+                    VALORACIÓN DE PAGO
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 16,
+                      fontWeight: 800,
+                      color: paymentRating.color,
+                      marginTop: 1,
+                    }}>
+                    {paymentRating.label}
+                  </div>
+                </div>
+              </div>
+
+              {paymentRating.score !== null && (
+                <div
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: 999,
+                    backgroundColor: paymentRating.bgColor,
+                    border: `1px solid ${paymentRating.borderColor}`,
+                    color: paymentRating.color,
+                    fontSize: 13,
+                    fontWeight: 800,
+                    flexShrink: 0,
+                  }}>
+                  {paymentRating.score} / 100
+                </div>
+              )}
+            </div>
+
+            {paymentRating.score !== null && (
+              <div
+                style={{
+                  width: '100%',
+                  height: 7,
+                  borderRadius: 999,
+                  backgroundColor: '#F1F5F9',
+                  overflow: 'hidden',
+                }}>
+                <div
+                  style={{
+                    width: `${paymentRating.score}%`,
+                    height: '100%',
+                    borderRadius: 999,
+                    backgroundColor: paymentRating.color,
+                    transition: 'width 0.35s ease',
+                  }}
+                />
+              </div>
+            )}
+
+            <div style={{ fontSize: 13, color: Colors.textSecondary, lineHeight: 1.4 }}>
+              {paymentRating.description}
+            </div>
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                gap: 8,
+              }}>
+              <div
+                style={{
+                  padding: '8px 10px',
+                  borderRadius: 12,
+                  backgroundColor: '#F8FAFC',
+                  border: `1px solid ${Colors.border}`,
+                }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: Colors.textMuted }}>
+                  ABONADO
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: Colors.text, marginTop: 2 }}>
+                  {paymentRating.paymentPercentage}%
+                </div>
+              </div>
+
+              <div
+                style={{
+                  padding: '8px 10px',
+                  borderRadius: 12,
+                  backgroundColor: '#F8FAFC',
+                  border: `1px solid ${Colors.border}`,
+                }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: Colors.textMuted }}>
+                  ABONOS / FIADOS
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: Colors.text, marginTop: 2 }}>
+                  {paymentRating.paymentsCount} / {paymentRating.creditsCount}
+                </div>
+              </div>
+
+              <div
+                style={{
+                  padding: '8px 10px',
+                  borderRadius: 12,
+                  backgroundColor: '#F8FAFC',
+                  border: `1px solid ${Colors.border}`,
+                }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: Colors.textMuted }}>
+                  ATRASOS
+                </div>
+                <div
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 800,
+                    color: paymentRating.overdueCount > 0 ? Colors.destructive : Colors.success,
+                    marginTop: 2,
+                  }}>
+                  {paymentRating.overdueCount === 0
+                    ? 'Sin atrasos'
+                    : `${paymentRating.overdueCount} vencido${paymentRating.overdueCount === 1 ? '' : 's'}`}
+                </div>
+              </div>
+            </div>
+          </Card>
+        )}
 
         <h3 style={{ fontSize: 16, fontWeight: 800, color: Colors.text, margin: '8px 0 0' }}>
           Tiendas vinculadas

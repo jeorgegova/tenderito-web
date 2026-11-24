@@ -48,7 +48,7 @@ export function ReportsScreen() {
         backgroundColor: Colors.background,
         position: 'relative',
         paddingBottom: 40,
-        overflowX: 'hidden',
+        overflowX: 'clip',
       }}>
       <DynamicBrandCurves position="bottom-right" />
 
@@ -59,7 +59,10 @@ export function ReportsScreen() {
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '16px 20px',
-          borderBottom: `1px solid ${Colors.border}`,
+          borderBottom: '1px solid #F1F5F9',
+          borderBottomLeftRadius: 24,
+          borderBottomRightRadius: 24,
+          boxShadow: '0 4px 14px rgba(0, 0, 0, 0.05)',
           backgroundColor: '#FFFFFF',
           position: 'sticky',
           top: 0,

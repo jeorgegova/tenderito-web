@@ -52,7 +52,7 @@ export function Header({
   }, [menuOpen]);
 
   const profile = useStore(s => s.profile);
-  const activeName = sessionName || profile?.merchant_name;
+  const activeName = sessionName || profile?.merchant_name || 'Tendero';
   const activeRole = sessionRole || (profile ? 'Tendero' : '');
   const { sync, isSyncing, isOnline } = useSync();
 
@@ -68,10 +68,15 @@ export function Header({
   return (
     <div
       style={{
-        padding: '16px 20px 12px',
-        backgroundColor: 'transparent',
-        position: 'relative',
-        zIndex: 10,
+        padding: '18px 20px 16px',
+        backgroundColor: '#FFFFFF',
+        borderBottomLeftRadius: 24,
+        borderBottomRightRadius: 24,
+        borderBottom: '1px solid #F1F5F9',
+        boxShadow: '0 4px 14px rgba(0, 0, 0, 0.05)',
+        position: 'sticky',
+        top: 0,
+        zIndex: 100,
         overflow: 'visible',
         width: '100%',
         boxSizing: 'border-box',
@@ -82,9 +87,11 @@ export function Header({
             style={{
               position: 'absolute',
               top: 0,
+              left: 0,
               right: 0,
-              width: 250,
-              height: 155,
+              bottom: 0,
+              borderBottomLeftRadius: 24,
+              borderBottomRightRadius: 24,
               overflow: 'hidden',
               pointerEvents: 'none',
               zIndex: 0,
@@ -93,11 +100,11 @@ export function Header({
             <div
               style={{
                 position: 'absolute',
-                top: -20,
-                right: 90,
-                width: 95,
-                height: 95,
-                borderRadius: 48,
+                top: -16,
+                right: 76,
+                width: 68,
+                height: 68,
+                borderRadius: 34,
                 backgroundColor: '#FFE4D0',
                 transform: 'rotate(8deg)',
               }}
@@ -106,13 +113,13 @@ export function Header({
             <div
               style={{
                 position: 'absolute',
-                top: -40,
-                right: -20,
-                width: 220,
-                height: 145,
-                borderBottomLeftRadius: 135,
-                borderBottomRightRadius: 60,
-                borderTopLeftRadius: 50,
+                top: -32,
+                right: -15,
+                width: 175,
+                height: 108,
+                borderBottomLeftRadius: 105,
+                borderBottomRightRadius: 45,
+                borderTopLeftRadius: 40,
                 backgroundColor: '#FFE4D0',
                 transform: 'rotate(-12deg)',
               }}
@@ -121,11 +128,11 @@ export function Header({
             <div
               style={{
                 position: 'absolute',
-                top: -28,
-                right: 95,
-                width: 75,
-                height: 75,
-                borderRadius: 38,
+                top: -22,
+                right: 80,
+                width: 54,
+                height: 54,
+                borderRadius: 27,
                 backgroundColor: Colors.primary,
                 transform: 'rotate(6deg)',
               }}
@@ -134,26 +141,26 @@ export function Header({
             <div
               style={{
                 position: 'absolute',
-                top: -50,
-                right: -25,
-                width: 185,
-                height: 125,
-                borderBottomLeftRadius: 115,
-                borderBottomRightRadius: 50,
-                borderTopLeftRadius: 40,
+                top: -40,
+                right: -18,
+                width: 145,
+                height: 92,
+                borderBottomLeftRadius: 90,
+                borderBottomRightRadius: 38,
+                borderTopLeftRadius: 32,
                 backgroundColor: Colors.primary,
                 transform: 'rotate(-10deg)',
               }}
             />
-            {/* Gotitas orgánicas del ondulado */}
+            {/* Gotitas orgánicas del ondulado contenidas dentro del header */}
             <div
               style={{
                 position: 'absolute',
-                top: 108,
-                right: 155,
-                width: 9,
-                height: 9,
-                borderRadius: 4.5,
+                top: 50,
+                right: 125,
+                width: 7,
+                height: 7,
+                borderRadius: 3.5,
                 backgroundColor: '#FFE4D0',
                 opacity: 0.9,
               }}
@@ -161,11 +168,11 @@ export function Header({
             <div
               style={{
                 position: 'absolute',
-                top: 124,
-                right: 130,
-                width: 6,
-                height: 6,
-                borderRadius: 3,
+                top: 60,
+                right: 105,
+                width: 5,
+                height: 5,
+                borderRadius: 2.5,
                 backgroundColor: Colors.primary,
                 opacity: 0.85,
               }}
@@ -176,9 +183,11 @@ export function Header({
             style={{
               position: 'absolute',
               top: 0,
+              left: 0,
               right: 0,
-              width: 220,
-              height: 140,
+              bottom: 0,
+              borderBottomLeftRadius: 24,
+              borderBottomRightRadius: 24,
               overflow: 'hidden',
               pointerEvents: 'none',
               zIndex: 0,
@@ -186,12 +195,12 @@ export function Header({
             <div
               style={{
                 position: 'absolute',
-                top: -45,
-                right: -25,
-                width: 210,
-                height: 155,
-                borderBottomLeftRadius: 110,
-                borderTopLeftRadius: 40,
+                top: -38,
+                right: -18,
+                width: 175,
+                height: 110,
+                borderBottomLeftRadius: 92,
+                borderTopLeftRadius: 32,
                 backgroundColor: '#FFE4D0',
                 transform: 'rotate(-8deg)',
               }}
@@ -199,12 +208,12 @@ export function Header({
             <div
               style={{
                 position: 'absolute',
-                top: -55,
-                right: -30,
-                width: 175,
-                height: 130,
-                borderBottomLeftRadius: 95,
-                borderTopLeftRadius: 30,
+                top: -46,
+                right: -22,
+                width: 142,
+                height: 92,
+                borderBottomLeftRadius: 78,
+                borderTopLeftRadius: 24,
                 backgroundColor: Colors.primary,
                 transform: 'rotate(-6deg)',
               }}

@@ -51,7 +51,7 @@ export function Button({
         justifyContent: 'center',
         display: 'flex',
         flexDirection: 'row',
-        flexWrap: 'wrap',
+        flexWrap: 'nowrap',
         gap: 8,
         minHeight: 48,
         backgroundColor: bg,
@@ -74,7 +74,14 @@ export function Button({
         if (!disabled) e.currentTarget.style.transform = 'scale(1)';
       }}>
       {leftElement ? leftElement : icon ? icon : null}
-      <span style={{ flexShrink: 1, textAlign: 'center', lineHeight: '20px', wordBreak: 'break-word' }}>
+      <span
+        style={{
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          textAlign: 'center',
+          lineHeight: '20px',
+        }}>
         {title}
       </span>
     </button>

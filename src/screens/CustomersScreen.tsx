@@ -66,9 +66,9 @@ export function CustomersScreen() {
         backgroundColor: Colors.background,
         position: 'relative',
         paddingBottom: 'calc(140px + env(safe-area-inset-bottom, 0px))',
-        overflowX: 'hidden',
+        overflowX: 'clip',
       }}>
-      <DynamicBrandCurves position="top-right" />
+      <DynamicBrandCurves position="bottom-right" />
 
       <Header title="Clientes" subtitle="Busca y gestiona tus fiados" />
 

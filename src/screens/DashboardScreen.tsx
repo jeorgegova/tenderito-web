@@ -103,6 +103,44 @@ export function DashboardScreen() {
     resetScroll();
   }, []);
 
+  const isInitialLoading =
+    (profileQuery.isLoading && !profile) ||
+    (customers.isLoading && !customers.data);
+
+  if (isInitialLoading) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 20,
+          backgroundColor: Colors.background,
+          gap: 12,
+        }}>
+        <div
+          className="spinner"
+          style={{
+            width: 44,
+            height: 44,
+            border: `3.5px solid ${Colors.primaryLight}`,
+            borderTopColor: Colors.primary,
+            borderRadius: '50%',
+            animation: 'spin 0.8s linear infinite',
+          }}
+        />
+        <span style={{ fontSize: 16, fontWeight: 700, color: Colors.text }}>
+          Cargando tu tienda...
+        </span>
+        <span style={{ fontSize: 13, color: Colors.textSecondary }}>
+          Preparando clientes y fiados
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
@@ -110,7 +148,7 @@ export function DashboardScreen() {
         backgroundColor: Colors.background,
         position: 'relative',
         paddingBottom: 'calc(140px + env(safe-area-inset-bottom, 0px))',
-        overflowX: 'hidden',
+        overflowX: 'clip',
       }}>
       {/* Surcos decorativos dinámicos de marca */}
       <DynamicBrandCurves position="bottom-left" />
@@ -129,12 +167,14 @@ export function DashboardScreen() {
             ? `Plan ${subStatus.planId.toUpperCase()} · Vence ${subStatus.formattedEndDate}`
             : `Plan ${(profile?.subscription_plan || 'free').toUpperCase()}`
         }
+        sessionName={profile?.merchant_name}
+        sessionRole="Tendero"
         showCurve
       />
 
       <div
         style={{
-          padding: '0 20px',
+          padding: '16px 20px 0',
           display: 'flex',
           flexDirection: 'column',
           gap: 14,
@@ -369,7 +409,7 @@ export function DashboardScreen() {
             }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
               <span style={{ color: '#FFFFFF', fontSize: 22, fontWeight: 800 }}>
-                {debtors.length}
+                {customers.isLoading && !customers.data ? '…' : debtors.length}
               </span>
               <span style={{ color: 'rgba(255,255,255,0.88)', fontSize: 13, fontWeight: 500 }}>
                 {debtors.length === 1 ? 'cliente te debe' : 'clientes te deben'}

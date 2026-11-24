@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState, useLayoutEffect } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useLayoutEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { resetScroll } from '../components/ui/ScrollToTop';
 import {
@@ -26,6 +26,7 @@ import {
   IoNotifications,
   IoNotificationsOutline,
   IoPersonOutline,
+  IoChevronDown,
   IoPencilOutline,
   IoBookOutline,
   IoSparkles,
@@ -149,6 +150,19 @@ export function CustomerHomeScreen() {
   const [selectedDetailMovement, setSelectedDetailMovement] = useState<any | null>(null);
   const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    window.addEventListener('mousedown', handleClickOutside);
+    return () => window.removeEventListener('mousedown', handleClickOutside);
+  }, [menuOpen]);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -369,8 +383,18 @@ export function CustomerHomeScreen() {
           backgroundColor: Colors.background,
           gap: 12,
         }}>
-        <div className="spinner" style={{ width: 36, height: 36, border: `3px solid ${Colors.border}`, borderTopColor: Colors.primary, borderRadius: '50%' }} />
-        <span style={{ fontSize: 15, fontWeight: 600, color: Colors.textSecondary }}>
+        <div
+          className="spinner"
+          style={{
+            width: 40,
+            height: 40,
+            border: `3.5px solid ${Colors.primaryLight}`,
+            borderTopColor: Colors.primary,
+            borderRadius: '50%',
+            animation: 'spin 0.8s linear infinite',
+          }}
+        />
+        <span style={{ fontSize: 15, fontWeight: 700, color: Colors.text }}>
           Cargando tus cuentas y tiendas...
         </span>
       </div>
@@ -457,7 +481,7 @@ export function CustomerHomeScreen() {
           to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
-      <DynamicBrandCurves position={selectedStore ? 'bottom-left' : 'top-right'} />
+      <DynamicBrandCurves position={selectedStore ? 'bottom-left' : 'bottom-right'} />
 
       {/* Cabecera persistente animada con transición de crecer/reducirse */}
       <header
@@ -470,27 +494,40 @@ export function CustomerHomeScreen() {
           borderBottomRightRadius: 24,
           borderBottom: '1px solid #F1F5F9',
           boxShadow: '0 4px 14px rgba(0, 0, 0, 0.05)',
-          overflow: 'hidden',
+          overflow: 'visible',
           padding: selectedStore ? '12px 18px' : '20px 20px 16px',
           transition:
             'padding 320ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 300ms ease',
         }}>
-        {/* Un único ondulado sutil de fondo que sale desde la izquierda (se desvanece suavemente en detalle) */}
+        {/* Un único ondulado sutil de fondo recortado a los bordes del header */}
         <div
           style={{
             position: 'absolute',
-            top: -35,
-            left: -25,
-            width: 220,
-            height: 145,
-            borderBottomRightRadius: 110,
-            backgroundColor: '#FFF5EB',
-            opacity: selectedStore ? 0 : 0.85,
-            transform: selectedStore ? 'rotate(0deg) scale(0.92)' : 'rotate(6deg) scale(1)',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            borderBottomLeftRadius: 24,
+            borderBottomRightRadius: 24,
+            overflow: 'hidden',
             pointerEvents: 'none',
-            transition: 'opacity 250ms ease, transform 320ms cubic-bezier(0.4, 0, 0.2, 1)',
-          }}
-        />
+            zIndex: 0,
+          }}>
+          <div
+            style={{
+              position: 'absolute',
+              top: -45,
+              left: -25,
+              width: 220,
+              height: 125,
+              borderBottomRightRadius: 110,
+              backgroundColor: '#FFF5EB',
+              opacity: selectedStore ? 0 : 0.85,
+              transform: selectedStore ? 'rotate(0deg) scale(0.92)' : 'rotate(6deg) scale(1)',
+              transition: 'opacity 250ms ease, transform 320ms cubic-bezier(0.4, 0, 0.2, 1)',
+            }}
+          />
+        </div>
 
         <div
           style={{
@@ -531,62 +568,202 @@ export function CustomerHomeScreen() {
               </button>
 
               {customerName && (
-                <div
-                  title={`Sesión iniciada como: ${customerName} (Cliente) - Toca para editar tus datos`}
-                  onClick={() => setIsEditProfileOpen(true)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    backgroundColor: '#FFFFFF',
-                    border: `1.5px solid ${Colors.border}`,
-                    padding: '4px 10px',
-                    borderRadius: 20,
-                    maxWidth: 160,
-                    boxShadow: '0 1px 3px rgba(20, 32, 51, 0.05)',
-                    cursor: 'pointer',
-                    flexShrink: 0,
-                  }}>
-                  <div
+                <div ref={menuRef} style={{ position: 'relative' }}>
+                  <button
+                    type="button"
+                    onClick={() => setMenuOpen(prev => !prev)}
+                    title={`Sesión iniciada como: ${customerName} (Cliente)`}
                     style={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: 12,
-                      backgroundColor: '#ECFDF5',
-                      color: '#059669',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      marginRight: 6,
-                      flexShrink: 0,
+                      gap: 6,
+                      backgroundColor: menuOpen ? '#F0FDF4' : '#FFFFFF',
+                      border: `1.5px solid ${menuOpen ? '#059669' : Colors.border}`,
+                      padding: '4px 8px 4px 10px',
+                      borderRadius: 20,
+                      maxWidth: 165,
+                      boxShadow: '0 1px 3px rgba(20, 32, 51, 0.05)',
+                      cursor: 'pointer',
+                      outline: 'none',
+                      transition: 'all 0.15s ease',
                     }}>
-                    <IoPersonOutline size={12} />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
-                    <span
+                    <div
                       style={{
-                        fontSize: 8,
-                        fontWeight: 800,
+                        width: 22,
+                        height: 22,
+                        borderRadius: 11,
+                        backgroundColor: '#ECFDF5',
                         color: '#059669',
-                        lineHeight: '10px',
-                        textTransform: 'uppercase',
-                        letterSpacing: 0.5,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
                       }}>
-                      CLIENTE
-                    </span>
-                    <span
+                      <IoPersonOutline size={12} />
+                    </div>
+                    <div
                       style={{
-                        fontSize: 11,
-                        fontWeight: 800,
-                        color: Colors.text,
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        lineHeight: '14px',
-                        marginTop: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        minWidth: 0,
+                        textAlign: 'left',
                       }}>
-                      {customerName}
-                    </span>
-                  </div>
+                      <span
+                        style={{
+                          fontSize: 8,
+                          fontWeight: 800,
+                          color: '#059669',
+                          lineHeight: '10px',
+                          textTransform: 'uppercase',
+                          letterSpacing: 0.5,
+                        }}>
+                        CLIENTE
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 800,
+                          color: Colors.text,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          lineHeight: '14px',
+                          marginTop: 1,
+                        }}>
+                        {customerName}
+                      </span>
+                    </div>
+                    <IoChevronDown
+                      size={12}
+                      color={Colors.textSecondary}
+                      style={{
+                        transform: menuOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.2s ease',
+                        marginLeft: 2,
+                        flexShrink: 0,
+                      }}
+                    />
+                  </button>
+
+                  {menuOpen && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 8px)',
+                        right: 0,
+                        width: 210,
+                        backgroundColor: '#FFFFFF',
+                        borderRadius: 16,
+                        border: `1px solid ${Colors.border}`,
+                        boxShadow: '0 10px 25px rgba(20, 32, 51, 0.12)',
+                        padding: '8px',
+                        zIndex: 200,
+                        animation: 'fadeIn 0.15s ease',
+                      }}>
+                      {/* Encabezado del menú */}
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8,
+                          padding: '6px 8px 8px',
+                        }}>
+                        <div
+                          style={{
+                            width: 30,
+                            height: 30,
+                            borderRadius: 15,
+                            backgroundColor: '#ECFDF5',
+                            color: '#059669',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                          }}>
+                          <IoPersonOutline size={15} />
+                        </div>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div
+                            style={{
+                              fontSize: 13,
+                              fontWeight: 800,
+                              color: Colors.text,
+                              lineHeight: '16px',
+                              wordBreak: 'break-word',
+                            }}>
+                            {customerName}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 600,
+                              color: '#059669',
+                            }}>
+                            Cliente
+                          </div>
+                        </div>
+                      </div>
+
+                      <div
+                        style={{
+                          height: 1,
+                          backgroundColor: '#F1F5F9',
+                          margin: '2px 0 4px',
+                        }}
+                      />
+
+                      {/* Opción única: Cerrar sesión */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          handleLogout();
+                        }}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
+                          padding: '8px 10px',
+                          borderRadius: 10,
+                          backgroundColor: 'transparent',
+                          border: 'none',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          transition: 'background-color 0.15s ease',
+                          boxSizing: 'border-box',
+                        }}
+                        onMouseEnter={e =>
+                          (e.currentTarget.style.backgroundColor = '#FEE2E2')
+                        }
+                        onMouseLeave={e =>
+                          (e.currentTarget.style.backgroundColor = 'transparent')
+                        }>
+                        <div
+                          style={{
+                            width: 26,
+                            height: 26,
+                            borderRadius: 13,
+                            backgroundColor: '#FEE2E2',
+                            color: Colors.destructive,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                          }}>
+                          <IoLogOutOutline size={16} />
+                        </div>
+                        <span
+                          style={{
+                            fontSize: 13,
+                            fontWeight: 700,
+                            color: Colors.destructive,
+                          }}>
+                          Cerrar sesión
+                        </span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -655,24 +832,6 @@ export function CustomerHomeScreen() {
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                <button
-                  onClick={handleOpenNotificationModal}
-                  title={notifGranted ? 'Configuración de notificaciones' : 'Activar notificaciones'}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: 38,
-                    height: 38,
-                    borderRadius: 19,
-                    backgroundColor: notifGranted ? '#ECFDF5' : '#FFF7ED',
-                    border: `1.5px solid ${notifGranted ? '#A7F3D0' : '#FED7AA'}`,
-                    color: notifGranted ? '#059669' : Colors.primary,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                  }}>
-                  {notifGranted ? <IoNotifications size={18} /> : <IoNotificationsOutline size={18} />}
-                </button>
                 <button
                   onClick={handleLogout}
                   style={{
@@ -1105,7 +1264,18 @@ export function CustomerHomeScreen() {
                 </button>
               </div>
             ) : isFetching && !isLoading ? (
-              <div style={{ padding: 32, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+              <div style={{ padding: 32, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                <div
+                  className="spinner"
+                  style={{
+                    width: 28,
+                    height: 28,
+                    border: `3px solid ${Colors.primaryLight}`,
+                    borderTopColor: Colors.primary,
+                    borderRadius: '50%',
+                    animation: 'spin 0.8s linear infinite',
+                  }}
+                />
                 <span style={{ fontSize: 13, fontWeight: 600, color: Colors.textSecondary }}>
                   Consultando movimientos de {formatMonthLabel(selectedMonth)}...
                 </span>
@@ -1231,15 +1401,41 @@ export function CustomerHomeScreen() {
                         onClick={() => setSelectedDetailMovement(item)}
                         title={item.title}
                         style={{
-                          fontSize: 12.5,
-                          fontWeight: 700,
-                          color: isCancelled ? '#94A3B8' : Colors.text,
-                          textDecoration: isCancelled ? 'line-through' : 'none',
-                          lineHeight: '17px',
-                          wordBreak: 'break-word',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          flexWrap: 'wrap',
                           cursor: 'pointer',
                         }}>
-                        {item.title}
+                        <span
+                          style={{
+                            fontSize: 12.5,
+                            fontWeight: 700,
+                            color: isCancelled ? '#94A3B8' : Colors.text,
+                            textDecoration: isCancelled ? 'line-through' : 'none',
+                            lineHeight: '17px',
+                            wordBreak: 'break-word',
+                          }}>
+                          {item.title}
+                        </span>
+                        {isCancelled && (
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              padding: '2px 7px',
+                              borderRadius: 4,
+                              fontSize: 10,
+                              fontWeight: 800,
+                              backgroundColor: '#E2E8F0',
+                              border: '1px solid #CBD5E1',
+                              color: '#64748B',
+                              lineHeight: '14px',
+                              flexShrink: 0,
+                            }}>
+                            Cancelado
+                          </span>
+                        )}
                       </div>
 
                       <div
@@ -1251,34 +1447,19 @@ export function CustomerHomeScreen() {
                           flexWrap: 'wrap',
                         }}>
                         {isCancelled ? (
-                          <>
-                            <span
-                              style={{
-                                display: 'inline-block',
-                                padding: '2px 7px',
-                                borderRadius: 4,
-                                fontSize: 10,
-                                fontWeight: 800,
-                                backgroundColor: '#E2E8F0',
-                                border: '1px solid #CBD5E1',
-                                color: '#64748B',
-                              }}>
-                              Cancelado
-                            </span>
-                            <span
-                              style={{
-                                display: 'inline-block',
-                                padding: '2px 6px',
-                                borderRadius: 4,
-                                fontSize: 10,
-                                fontWeight: 700,
-                                backgroundColor: '#F1F5F9',
-                                color: '#94A3B8',
-                                textDecoration: 'line-through',
-                              }}>
-                              {isCredit ? 'Compra fiada (+)' : 'Abono realizado (-)'}
-                            </span>
-                          </>
+                          <span
+                            style={{
+                              display: 'inline-block',
+                              padding: '2px 6px',
+                              borderRadius: 4,
+                              fontSize: 10,
+                              fontWeight: 700,
+                              backgroundColor: '#F1F5F9',
+                              color: '#94A3B8',
+                              textDecoration: 'line-through',
+                            }}>
+                            {isCredit ? 'Compra fiada (+)' : 'Abono realizado (-)'}
+                          </span>
                         ) : (
                           <span
                             style={{
