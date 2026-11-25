@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { generateLocalId } from '../utils/id';
+import { compressImage } from '../utils/imageCompressor';
 
 export interface StoreStatus {
   id: string;
@@ -180,9 +181,24 @@ export async function markStatusAsViewed(statusId: string, customerId: string): 
   if (!statusId || !customerId) return;
 
   try {
-    await supabase
-      .from('store_status_views')
-      .upsert({ status_id: statusId, customer_id: customerId, viewed_at: new Date().toISOString() }, { onConflict: 'status_id,customer_id' });
+    // Intentar registrar mediante RPC con SECURITY DEFINER para garantizar bypass seguro de RLS
+    const { error: rpcError } = await supabase.rpc('registrar_vista_estado', {
+      p_status_id: statusId,
+      p_customer_id: customerId,
+    });
+
+    if (rpcError) {
+      console.warn('[storeStatuses] Error llamando registrar_vista_estado RPC, fallback a upsert:', rpcError.message);
+      const { error: upsertError } = await supabase
+        .from('store_status_views')
+        .upsert(
+          { status_id: statusId, customer_id: customerId, viewed_at: new Date().toISOString() },
+          { onConflict: 'status_id,customer_id' }
+        );
+      if (upsertError) {
+        console.warn('[storeStatuses] Error en fallback upsert store_status_views:', upsertError.message);
+      }
+    }
   } catch (err) {
     console.warn('[storeStatuses] Error registrando visualización:', err);
   }
@@ -220,15 +236,26 @@ export async function createStoreStatus(params: {
     let mediaUrl: string | null = null;
     let mediaPath: string | null = null;
 
-    // Subir imagen a Supabase Storage si se proporcionó
+    // Subir imagen a Supabase Storage si se proporcionó (comprimida para ahorrar almacenamiento)
     if (params.file) {
-      const ext = params.file.type?.includes('png') ? 'png' : 'jpg';
+      let fileToUpload = params.file;
+      try {
+        fileToUpload = await compressImage(params.file, {
+          maxWidth: 1080,
+          maxHeight: 1920,
+          quality: 0.75,
+        });
+      } catch (compErr) {
+        console.warn('[storeStatuses] No se pudo comprimir la imagen en subida, usando original:', compErr);
+      }
+
+      const ext = fileToUpload.type?.includes('png') ? 'png' : fileToUpload.type?.includes('webp') ? 'webp' : 'jpg';
       mediaPath = `${params.storeId}/${statusId}.${ext}`;
 
       const { error: uploadError } = await supabase.storage
         .from('store-statuses')
-        .upload(mediaPath, params.file, {
-          contentType: params.file.type || 'image/jpeg',
+        .upload(mediaPath, fileToUpload, {
+          contentType: fileToUpload.type || 'image/jpeg',
           upsert: true,
         });
 

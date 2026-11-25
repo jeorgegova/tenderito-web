@@ -58,11 +58,12 @@ alter table public.store_status_views enable row level security;
 drop policy if exists store_statuses_select on public.store_statuses;
 create policy store_statuses_select on public.store_statuses
   for select using (
-    -- Tendero/miembro de la tienda puede ver todos los estados de su tienda
+    -- Tendero (dueño o miembro) de la tienda puede ver todos los estados de su tienda
     exists (
-      select 1 from public.store_memberships sm
-      where sm.store_id = public.store_statuses.store_id
-        and sm.user_id = auth.uid()
+      select 1 from public.stores s
+      left join public.store_memberships sm on sm.store_id = s.id
+      where s.id = public.store_statuses.store_id
+        and (s.owner_id = auth.uid() or sm.user_id = auth.uid())
     )
     or
     -- Cliente vinculado a la tienda solo ve estados vigentes
@@ -82,22 +83,24 @@ create policy store_statuses_select on public.store_statuses
 drop policy if exists store_statuses_insert on public.store_statuses;
 create policy store_statuses_insert on public.store_statuses
   for insert with check (
-    -- Solo miembros de la tienda
+    -- Dueño o miembros de la tienda
     exists (
-      select 1 from public.store_memberships sm
-      where sm.store_id = public.store_statuses.store_id
-        and sm.user_id = auth.uid()
+      select 1 from public.stores s
+      left join public.store_memberships sm on sm.store_id = s.id
+      where s.id = public.store_statuses.store_id
+        and (s.owner_id = auth.uid() or sm.user_id = auth.uid())
     )
   );
 
 drop policy if exists store_statuses_delete on public.store_statuses;
 create policy store_statuses_delete on public.store_statuses
   for delete using (
-    -- Solo miembros de la tienda
+    -- Dueño o miembros de la tienda
     exists (
-      select 1 from public.store_memberships sm
-      where sm.store_id = public.store_statuses.store_id
-        and sm.user_id = auth.uid()
+      select 1 from public.stores s
+      left join public.store_memberships sm on sm.store_id = s.id
+      where s.id = public.store_statuses.store_id
+        and (s.owner_id = auth.uid() or sm.user_id = auth.uid())
     )
   );
 
@@ -112,12 +115,13 @@ create policy store_status_views_select on public.store_status_views
         and c.user_id = auth.uid()
     )
     or
-    -- El tendero ve quién ha visto los estados de sus tiendas
+    -- El tendero (dueño o miembro) ve quién ha visto los estados de sus tiendas
     exists (
       select 1 from public.store_statuses ss
-      join public.store_memberships sm on sm.store_id = ss.store_id
+      join public.stores s on s.id = ss.store_id
+      left join public.store_memberships sm on sm.store_id = ss.store_id
       where ss.id = public.store_status_views.status_id
-        and sm.user_id = auth.uid()
+        and (s.owner_id = auth.uid() or sm.user_id = auth.uid())
     )
   );
 
@@ -125,6 +129,16 @@ drop policy if exists store_status_views_insert on public.store_status_views;
 create policy store_status_views_insert on public.store_status_views
   for insert with check (
     -- El cliente solo puede registrar vistas para su propio customer_id
+    exists (
+      select 1 from public.customers c
+      where c.id = public.store_status_views.customer_id
+        and c.user_id = auth.uid()
+    )
+  );
+
+drop policy if exists store_status_views_update on public.store_status_views;
+create policy store_status_views_update on public.store_status_views
+  for update using (
     exists (
       select 1 from public.customers c
       where c.id = public.store_status_views.customer_id
@@ -225,12 +239,14 @@ security definer
 set search_path = public
 as $$
 begin
-  -- Solo miembros de la tienda pueden ver quién lo vio
+  -- Solo el dueño de la tienda o miembros autorizados pueden ver quién lo vio
   if not exists (
     select 1
     from public.store_statuses ss
-    join public.store_memberships sm on sm.store_id = ss.store_id
-    where ss.id = p_status_id and sm.user_id = auth.uid()
+    join public.stores s on s.id = ss.store_id
+    left join public.store_memberships sm on sm.store_id = ss.store_id
+    where ss.id = p_status_id
+      and (s.owner_id = auth.uid() or sm.user_id = auth.uid())
   ) then
     raise exception 'No tienes permisos para ver las estadísticas de este estado.' using errcode = '42501';
   end if;
@@ -252,6 +268,26 @@ end;
 $$;
 
 grant execute on function public.obtener_vistas_estado(uuid) to authenticated, service_role;
+
+-- 6.1 RPC para registrar visualización de estado por parte de un cliente (bypasses RLS issues)
+create or replace function public.registrar_vista_estado(
+  p_status_id uuid,
+  p_customer_id uuid
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.store_status_views (status_id, customer_id, viewed_at)
+  values (p_status_id, p_customer_id, now())
+  on conflict (status_id, customer_id)
+  do update set viewed_at = excluded.viewed_at;
+end;
+$$;
+
+grant execute on function public.registrar_vista_estado(uuid, uuid) to authenticated, anon;
 
 -- 7. Trigger para disparo automático de notificación (opcional si existe la función)
 do $$

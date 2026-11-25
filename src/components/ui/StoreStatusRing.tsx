@@ -9,7 +9,7 @@ interface StoreStatusRingProps {
   unviewedCount?: number; // Cantidad de estados no vistos
   showAddBadge?: boolean; // Muestra el botón '+' de agregar
   onAddPress?: (e: React.MouseEvent) => void;
-  onClick?: () => void;
+  onClick?: (e?: React.MouseEvent) => void;
   children: React.ReactNode;
   style?: React.CSSProperties;
 }
@@ -48,7 +48,12 @@ export function StoreStatusRing({
 
   return (
     <div
-      onClick={onClick}
+      onClick={e => {
+        if (onClick) {
+          e.stopPropagation();
+          onClick(e);
+        }
+      }}
       style={{
         position: 'relative',
         width: size,

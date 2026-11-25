@@ -13,6 +13,7 @@ import { Button } from './ui/Button';
 import { StatusDatePickerModal } from './ui/StatusDatePickerModal';
 import { getBogotaTodayYMD } from '../utils/format';
 import { createStoreStatus, StoreStatus } from '../services/storeStatuses';
+import { compressImage } from '../utils/imageCompressor';
 
 interface CreateStoreStatusModalProps {
   isOpen: boolean;
@@ -47,6 +48,7 @@ export function CreateStoreStatusModal({
   const [caption, setCaption] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isCompressing, setIsCompressing] = useState(false);
   const [startDateYMD, setStartDateYMD] = useState<string>(todayYMD);
   const [endDateYMD, setEndDateYMD] = useState<string>(addDaysToYMD(todayYMD, 7));
   const [activePreset, setActivePreset] = useState<'1d' | '1w' | '2w' | 'custom'>('1w');
@@ -65,6 +67,7 @@ export function CreateStoreStatusModal({
       }
       setSelectedFile(null);
       setPreviewUrl(null);
+      setIsCompressing(false);
       setStartDateYMD(todayYMD);
       setEndDateYMD(addDaysToYMD(todayYMD, 7));
       setActivePreset('1w');
@@ -78,7 +81,7 @@ export function CreateStoreStatusModal({
 
   const isLimitReached = currentActiveCount >= 3;
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -87,15 +90,32 @@ export function CreateStoreStatusModal({
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      setErrorMessage('La imagen es demasiado grande. El tamaño máximo permitido es 5 MB.');
+    if (file.size > 15 * 1024 * 1024) {
+      setErrorMessage('La imagen original no puede superar los 15 MB.');
       return;
     }
 
     setErrorMessage(null);
-    setSelectedFile(file);
-    const objectUrl = URL.createObjectURL(file);
-    setPreviewUrl(objectUrl);
+    setIsCompressing(true);
+
+    try {
+      // Comprimir automáticamente la imagen usando Canvas antes de subir
+      const compressed = await compressImage(file, {
+        maxWidth: 1080,
+        maxHeight: 1920,
+        quality: 0.75,
+      });
+
+      setSelectedFile(compressed);
+      const objectUrl = URL.createObjectURL(compressed);
+      setPreviewUrl(objectUrl);
+    } catch (err) {
+      console.warn('[CreateStoreStatusModal] Error comprimiendo imagen:', err);
+      setSelectedFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    } finally {
+      setIsCompressing(false);
+    }
   };
 
   const handleRemoveImage = () => {
@@ -317,10 +337,16 @@ export function CreateStoreStatusModal({
                 style={{
                   position: 'relative',
                   width: '100%',
-                  height: 160,
+                  maxWidth: 220,
+                  height: 280,
+                  margin: '0 auto',
                   borderRadius: 16,
                   overflow: 'hidden',
-                  backgroundColor: '#0F172A',
+                  backgroundColor: '#000000',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 4px 14px rgba(0, 0, 0, 0.25)',
                 }}>
                 <img
                   src={previewUrl}
@@ -328,7 +354,7 @@ export function CreateStoreStatusModal({
                   style={{
                     width: '100%',
                     height: '100%',
-                    objectFit: 'cover',
+                    objectFit: 'contain',
                   }}
                 />
                 <button
@@ -353,6 +379,22 @@ export function CreateStoreStatusModal({
                   <IoTrashOutline size={14} /> Cambiar
                 </button>
               </div>
+            ) : isCompressing ? (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  padding: '20px',
+                  borderRadius: 14,
+                  border: '1.5px dashed #CBD5E1',
+                  backgroundColor: '#FAFAFA',
+                  fontSize: 13,
+                  color: Colors.textSecondary,
+                }}>
+                <span>Optimizando y comprimiendo imagen...</span>
+              </div>
             ) : (
               <label
                 style={{
@@ -372,7 +414,7 @@ export function CreateStoreStatusModal({
                   Subir imagen
                 </span>
                 <span style={{ fontSize: 11, color: Colors.textSecondary }}>
-                  (JPG, PNG hasta 5MB)
+                  (Se comprime automáticamente para ahorrar almacenamiento)
                 </span>
                 <input
                   type="file"

@@ -48,6 +48,7 @@ export function StoreStatusViewerModal({
   const [isPaused, setIsPaused] = useState(false);
   const [showViewsSheet, setShowViewsSheet] = useState(false);
   const [viewsList, setViewsList] = useState<StoreStatusViewItem[]>([]);
+  const [dynamicViewsCount, setDynamicViewsCount] = useState<number>(0);
   const [isLoadingViews, setIsLoadingViews] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -76,6 +77,28 @@ export function StoreStatusViewerModal({
       markStatusAsViewed(currentStatus.id, customerId);
     }
   }, [isOpen, isMerchant, customerId, currentStatus?.id]);
+
+  // Para el tendero: consultar en tiempo real quiénes han visto el estado apenas abre el visor o cambia de estado
+  useEffect(() => {
+    if (!isOpen || !isMerchant || !currentStatus?.id) return;
+
+    let isMounted = true;
+    setDynamicViewsCount(currentStatus.views_count ?? 0);
+
+    fetchStatusViews(currentStatus.id)
+      .then(views => {
+        if (!isMounted) return;
+        setViewsList(views);
+        setDynamicViewsCount(views.length);
+      })
+      .catch(err => {
+        console.warn('[StoreStatusViewerModal] Error consultando vistas:', err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, isMerchant, currentStatus?.id]);
 
   const goToNext = useCallback(() => {
     const now = Date.now();
@@ -147,10 +170,13 @@ export function StoreStatusViewerModal({
     if (!currentStatus) return;
     setIsPaused(true);
     setShowViewsSheet(true);
-    setIsLoadingViews(true);
+    if (viewsList.length === 0) {
+      setIsLoadingViews(true);
+    }
     try {
       const views = await fetchStatusViews(currentStatus.id);
       setViewsList(views);
+      setDynamicViewsCount(views.length);
     } catch (e) {
       console.warn('Error cargando vistas:', e);
     } finally {
@@ -556,7 +582,7 @@ export function StoreStatusViewerModal({
                 cursor: 'pointer',
               }}>
               <IoEyeOutline size={18} />
-              <span>Visto por {currentStatus.views_count ?? 0}</span>
+              <span>Visto por {dynamicViewsCount}</span>
             </button>
           )}
         </div>

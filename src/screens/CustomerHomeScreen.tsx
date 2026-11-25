@@ -203,15 +203,27 @@ export function CustomerHomeScreen() {
 
   // Al cambiar o salir de la tienda seleccionada, restablecer filtros a mes actual
   const handleSelectStore = (storeId: string | null) => {
-    setSelectedStoreId(storeId);
-    setSelectedMonth(getCurrentMonthKey());
-    setSearchConcept('');
-    setIsSearchOpen(false);
-    setFilterType('all');
     if (storeId) {
+      window.history.pushState({ storeId }, '', window.location.href);
+      setSelectedStoreId(storeId);
+      setSelectedMonth(getCurrentMonthKey());
+      setSearchConcept('');
+      setIsSearchOpen(false);
+      setFilterType('all');
       queryClient.invalidateQueries({ queryKey: ['customer-portal', storeId] });
+      resetScroll();
+    } else {
+      if (window.history.state?.storeId) {
+        window.history.back();
+      } else {
+        setSelectedStoreId(null);
+        setSelectedMonth(getCurrentMonthKey());
+        setSearchConcept('');
+        setIsSearchOpen(false);
+        setFilterType('all');
+        resetScroll();
+      }
     }
-    resetScroll();
   };
 
   const { data, isLoading, isFetching, isError, refetch } = useQuery({
@@ -239,6 +251,33 @@ export function CustomerHomeScreen() {
     statuses: StoreStatus[];
     initialIndex?: number;
   } | null>(null);
+
+  const selectedStoreIdRef = useRef<string | null>(selectedStoreId);
+  selectedStoreIdRef.current = selectedStoreId;
+
+  const selectedStoreForStatusRef = useRef(selectedStoreForStatus);
+  selectedStoreForStatusRef.current = selectedStoreForStatus;
+
+  // Manejo del botón atrás del navegador y gestos swipe del teléfono en Web / PWA
+  useEffect(() => {
+    const onPopState = () => {
+      if (selectedStoreForStatusRef.current) {
+        setSelectedStoreForStatus(null);
+        return;
+      }
+      if (selectedStoreIdRef.current) {
+        setSelectedStoreId(null);
+        setSelectedMonth(getCurrentMonthKey());
+        setSearchConcept('');
+        setIsSearchOpen(false);
+        setFilterType('all');
+        resetScroll();
+      }
+    };
+
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
 
   const customerId = data?.customer?.id;
   const storeIdsKey = (data?.stores || []).map((s: any) => s.store_id).sort().join(',');
@@ -2137,38 +2176,47 @@ export function CustomerHomeScreen() {
                       const unviewedCount = statusesForStore.filter(s => !s.has_viewed).length;
 
                       return (
-                        <StoreStatusRing
-                          size={54}
-                          strokeWidth={2.5}
-                          count={statusesForStore.length}
-                          unviewedCount={unviewedCount}
-                          onClick={
-                            statusesForStore.length > 0
-                              ? () => {
-                                  setSelectedStoreForStatus({
-                                    storeId: item.store_id,
-                                    storeName,
-                                    statuses: statusesForStore,
-                                  });
-                                }
-                              : undefined
-                          }>
-                          <div
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              borderRadius: '50%',
-                              backgroundColor: paid ? '#DCFCE7' : '#FEE2E2',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                            }}>
-                            <IoStorefront
-                              size={24}
-                              color={paid ? '#15803D' : Colors.destructive}
-                            />
-                          </div>
-                        </StoreStatusRing>
+                        <div
+                          onClick={e => {
+                            if (statusesForStore.length > 0) {
+                              e.stopPropagation();
+                            }
+                          }}
+                          style={{ display: 'inline-flex', flexShrink: 0 }}>
+                          <StoreStatusRing
+                            size={54}
+                            strokeWidth={2.5}
+                            count={statusesForStore.length}
+                            unviewedCount={unviewedCount}
+                            onClick={
+                              statusesForStore.length > 0
+                                ? (e?: any) => {
+                                    e?.stopPropagation?.();
+                                    setSelectedStoreForStatus({
+                                      storeId: item.store_id,
+                                      storeName,
+                                      statuses: statusesForStore,
+                                    });
+                                  }
+                                : undefined
+                            }>
+                            <div
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                borderRadius: '50%',
+                                backgroundColor: paid ? '#DCFCE7' : '#FEE2E2',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}>
+                              <IoStorefront
+                                size={24}
+                                color={paid ? '#15803D' : Colors.destructive}
+                              />
+                            </div>
+                          </StoreStatusRing>
+                        </div>
                       );
                     })()}
 
