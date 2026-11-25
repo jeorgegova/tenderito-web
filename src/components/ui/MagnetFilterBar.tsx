@@ -130,14 +130,15 @@ export function MagnetFilterBar<T extends string = string>({
             width: pillStyle.width,
             backgroundColor: '#FFFFFF',
             borderRadius: 999,
-            border: `1px solid ${Colors.primaryMid}`,
-            boxShadow: '0 2px 5px rgba(20, 32, 51, 0.08)',
+            border: `1.5px solid ${Colors.primary}`,
+            boxShadow: '0 2px 6px rgba(255, 107, 0, 0.14), 0 1px 3px rgba(20, 32, 51, 0.06)',
             transform: `translate3d(${pillStyle.left}px, 0, 0)`,
             transition: isFirstRender.current
               ? 'none'
               : 'transform 0.38s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)',
             pointerEvents: 'none',
             zIndex: 0,
+            boxSizing: 'border-box',
           }}
         />
       )}
@@ -157,11 +158,13 @@ export function MagnetFilterBar<T extends string = string>({
               flex: scrollable ? '0 0 auto' : 1,
               padding: scrollable ? '8px 16px' : '8px 6px',
               borderRadius: 999,
-              backgroundColor: 'transparent',
+              backgroundColor: !pillStyle.ready && isSelected ? '#FFFFFF' : 'transparent',
+              border: !pillStyle.ready && isSelected ? `1.5px solid ${Colors.primary}` : '1.5px solid transparent',
+              boxShadow: !pillStyle.ready && isSelected ? '0 2px 6px rgba(255, 107, 0, 0.14)' : 'none',
               color: isSelected ? Colors.primaryDark : Colors.textSecondary,
+              WebkitTextFillColor: isSelected ? Colors.primaryDark : Colors.textSecondary,
               fontSize: 12,
               fontWeight: isSelected ? 800 : 600,
-              border: 'none',
               cursor: 'pointer',
               position: 'relative',
               zIndex: 1,
@@ -193,6 +196,9 @@ export function MagnetFilterBar<T extends string = string>({
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
+                color: isSelected ? Colors.primaryDark : Colors.textSecondary,
+                WebkitTextFillColor: isSelected ? Colors.primaryDark : Colors.textSecondary,
+                fontWeight: isSelected ? 800 : 600,
               }}>
               {opt.label}
             </span>

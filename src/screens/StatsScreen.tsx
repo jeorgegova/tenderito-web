@@ -1,5 +1,5 @@
 import { useState, useMemo, useLayoutEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { resetScroll } from '../components/ui/ScrollToTop';
 import {
@@ -82,6 +82,8 @@ export function StatsScreen() {
   const { data: stats, isLoading } = useQuery({
     queryKey: ['stats', filters.from, filters.to, selectedIds, preset],
     queryFn: () => fetchStats(filters),
+    placeholderData: keepPreviousData,
+    staleTime: 1000 * 60 * 5,
   });
 
   function toggleCustomer(id: string) {
@@ -175,7 +177,7 @@ export function StatsScreen() {
           boxSizing: 'border-box',
         }}>
 
-        {isLoading ? (
+        {!stats && isLoading ? (
           <Card style={{ textAlign: 'center', padding: 32 }}>
             <span style={{ fontSize: 14, color: Colors.textSecondary, fontWeight: 600 }}>
               Calculando cartera y estadísticas…

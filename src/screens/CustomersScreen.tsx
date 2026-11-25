@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { resetScroll } from '../components/ui/ScrollToTop';
 import {
@@ -35,6 +35,7 @@ export function CustomersScreen() {
   const { data, refetch, isLoading } = useQuery({
     queryKey: ['customers'],
     queryFn: () => fetchCustomers(),
+    placeholderData: keepPreviousData,
   });
 
   const visibleCustomers = useMemo(() => {
