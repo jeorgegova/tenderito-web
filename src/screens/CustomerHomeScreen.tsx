@@ -1,5 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState, useLayoutEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { StoreStatusRing } from '../components/ui/StoreStatusRing';
+import { StoreStatusViewerModal } from '../components/StoreStatusViewerModal';
+import { fetchCustomerStoreStatuses, StoreStatus } from '../services/storeStatuses';
 import { resetScroll } from '../components/ui/ScrollToTop';
 import {
   IoReceiptOutline,
@@ -227,6 +231,64 @@ export function CustomerHomeScreen() {
     });
     return () => cleanup();
   }, [data?.customer?.id, data?.customer?.user_id]);
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [selectedStoreForStatus, setSelectedStoreForStatus] = useState<{
+    storeId: string;
+    storeName: string;
+    statuses: StoreStatus[];
+    initialIndex?: number;
+  } | null>(null);
+
+  const customerId = data?.customer?.id;
+  const storeIdsKey = (data?.stores || []).map((s: any) => s.store_id).sort().join(',');
+
+  const { data: storeStatusesMap = {}, refetch: refetchStatuses } = useQuery({
+    queryKey: ['customer-stores-statuses', customerId, storeIdsKey],
+    queryFn: async () => {
+      if (!customerId || !data?.stores || data.stores.length === 0) return {};
+      const map: Record<string, StoreStatus[]> = {};
+      await Promise.all(
+        data.stores.map(async (item: any) => {
+          const list = await fetchCustomerStoreStatuses(item.store_id, customerId);
+          map[item.store_id] = list;
+        }),
+      );
+      return map;
+    },
+    enabled: Boolean(customerId && data?.stores && data.stores.length > 0),
+  });
+
+  // Deep linking: abrir automáticamente si la URL incluye ?openStatusStoreId=...
+  const openStatusStoreId = searchParams.get('openStatusStoreId');
+  const targetStatusId = searchParams.get('statusId');
+
+  useEffect(() => {
+    if (openStatusStoreId && customerId) {
+      fetchCustomerStoreStatuses(openStatusStoreId, customerId).then(statuses => {
+        if (statuses.length > 0) {
+          const matchedStore = (data?.stores || []).find((s: any) => s.store_id === openStatusStoreId);
+          const rawStore = matchedStore?.stores;
+          const storeObj = Array.isArray(rawStore) ? rawStore[0] : rawStore;
+          const sName = storeObj?.store_name || 'Tienda';
+          let initialIdx = 0;
+          if (targetStatusId) {
+            const foundIdx = statuses.findIndex(s => s.id === targetStatusId);
+            if (foundIdx >= 0) initialIdx = foundIdx;
+          }
+          setSelectedStoreForStatus({
+            storeId: openStatusStoreId,
+            storeName: sName,
+            statuses,
+            initialIndex: initialIdx,
+          });
+        }
+      });
+      searchParams.delete('openStatusStoreId');
+      searchParams.delete('statusId');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [openStatusStoreId, targetStatusId, customerId, data?.stores]);
 
   const checkInternetConnection = (): boolean => {
     if (!navigator.onLine) {
@@ -2069,23 +2131,46 @@ export function CustomerHomeScreen() {
                     boxShadow: '0 4px 10px rgba(20, 32, 51, 0.06)',
                   }}>
                   <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-                    {/* Icono de la tienda en círculo verde o rojo según saldo */}
-                    <div
-                      style={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: '50%',
-                        backgroundColor: paid ? '#DCFCE7' : '#FEE2E2',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                      }}>
-                      <IoStorefront
-                        size={24}
-                        color={paid ? '#15803D' : Colors.destructive}
-                      />
-                    </div>
+                    {/* Icono de la tienda con anillo de estados estilo WhatsApp */}
+                    {(() => {
+                      const statusesForStore = storeStatusesMap[item.store_id] || [];
+                      const unviewedCount = statusesForStore.filter(s => !s.has_viewed).length;
+
+                      return (
+                        <StoreStatusRing
+                          size={54}
+                          strokeWidth={2.5}
+                          count={statusesForStore.length}
+                          unviewedCount={unviewedCount}
+                          onClick={
+                            statusesForStore.length > 0
+                              ? () => {
+                                  setSelectedStoreForStatus({
+                                    storeId: item.store_id,
+                                    storeName,
+                                    statuses: statusesForStore,
+                                  });
+                                }
+                              : undefined
+                          }>
+                          <div
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              borderRadius: '50%',
+                              backgroundColor: paid ? '#DCFCE7' : '#FEE2E2',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}>
+                            <IoStorefront
+                              size={24}
+                              color={paid ? '#15803D' : Colors.destructive}
+                            />
+                          </div>
+                        </StoreStatusRing>
+                      );
+                    })()}
 
                     {/* Información de la tienda */}
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -2416,6 +2501,22 @@ export function CustomerHomeScreen() {
           onClose={() => setIsNotifModalOpen(false)}
           onActivated={() => setNotifGranted(true)}
         />
+
+        {/* Visor de estados para el cliente */}
+        {selectedStoreForStatus && (
+          <StoreStatusViewerModal
+            isOpen={Boolean(selectedStoreForStatus)}
+            onClose={() => {
+              setSelectedStoreForStatus(null);
+              refetchStatuses();
+            }}
+            statuses={selectedStoreForStatus.statuses}
+            initialIndex={selectedStoreForStatus.initialIndex || 0}
+            storeName={selectedStoreForStatus.storeName}
+            isMerchant={false}
+            customerId={customerId}
+          />
+        )}
     </div>
   );
 }

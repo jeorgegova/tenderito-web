@@ -41,6 +41,10 @@ import { syncAll } from '../services/sync';
 import type { SubscriptionPlanItem } from '../types';
 import { MagnetTabBar } from '../components/ui/MagnetTabBar';
 import { fetchProfile } from '../services/profile';
+import { StoreStatusRing } from '../components/ui/StoreStatusRing';
+import { CreateStoreStatusModal } from '../components/CreateStoreStatusModal';
+import { StoreStatusViewerModal } from '../components/StoreStatusViewerModal';
+import { fetchMerchantStoreStatuses } from '../services/storeStatuses';
 
 export function ProfileScreen() {
   const navigate = useNavigate();
@@ -78,7 +82,18 @@ export function ProfileScreen() {
     }
   }, [data, setProfile]);
 
+  const [isCreateStatusOpen, setIsCreateStatusOpen] = useState(false);
+  const [isViewStatusOpen, setIsViewStatusOpen] = useState(false);
+
+  const activeStoreId = currentStoreId || activeStore?.store_id || (data as any)?.id;
+  const { data: storeStatuses = [], refetch: refetchStatuses } = useQuery({
+    queryKey: ['store-statuses-merchant', activeStoreId],
+    queryFn: () => (activeStoreId ? fetchMerchantStoreStatuses(activeStoreId) : []),
+    enabled: Boolean(activeStoreId),
+  });
+
   const subStatus = calculateSubscriptionStatus(data as any);
+  const hasActivePaidPlan = subStatus.effectivePlan !== 'free' && !subStatus.isExpired;
   const currentPlan = plans.find(
     p => p.id.toLowerCase() === subStatus.effectivePlan.toLowerCase(),
   );
@@ -181,20 +196,44 @@ export function ProfileScreen() {
             textAlign: 'center',
             boxShadow: '0 8px 24px rgba(20, 32, 51, 0.06)',
           }}>
-          <div
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: 28,
-              backgroundColor: Colors.primaryLight,
-              color: Colors.primary,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: 12,
-            }}>
-            <IoStorefrontOutline size={28} />
-          </div>
+          <StoreStatusRing
+            size={68}
+            strokeWidth={3}
+            count={storeStatuses.length}
+            unviewedCount={storeStatuses.length}
+            showAddBadge={hasActivePaidPlan}
+            onAddPress={() => {
+              if (storeStatuses.length >= 3) {
+                showAlert(
+                  'Límite alcanzado',
+                  'Tu tienda ya cuenta con el máximo de 3 estados activos simultáneos. Espera a que expire uno o elimínalo para publicar otro.',
+                );
+                return;
+              }
+              setIsCreateStatusOpen(true);
+            }}
+            onClick={() => {
+              if (storeStatuses.length > 0) {
+                setIsViewStatusOpen(true);
+              } else if (hasActivePaidPlan) {
+                setIsCreateStatusOpen(true);
+              }
+            }}
+            style={{ marginBottom: 12 }}>
+            <div
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: 28,
+                backgroundColor: Colors.primaryLight,
+                color: Colors.primary,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+              <IoStorefrontOutline size={28} />
+            </div>
+          </StoreStatusRing>
 
           <h2 style={{ fontSize: 20, fontWeight: 800, color: Colors.text, margin: 0 }}>
             {(data as any)?.store_name ?? 'Cargando tienda…'}
@@ -675,6 +714,35 @@ export function ProfileScreen() {
             queryClient.invalidateQueries({ queryKey: ['active-store'] });
           }}
         />
+        {/* Modal para crear nuevo estado publicitario */}
+        {activeStoreId && (
+          <CreateStoreStatusModal
+            isOpen={isCreateStatusOpen}
+            onClose={() => setIsCreateStatusOpen(false)}
+            storeId={activeStoreId}
+            storeName={(data as any)?.store_name || ''}
+            currentActiveCount={storeStatuses.length}
+            onCreated={async () => {
+              await refetchStatuses();
+              queryClient.invalidateQueries({ queryKey: ['store-statuses-merchant', activeStoreId] });
+            }}
+          />
+        )}
+
+        {/* Visor de estados para el tendero */}
+        {isViewStatusOpen && storeStatuses.length > 0 && (
+          <StoreStatusViewerModal
+            isOpen={isViewStatusOpen}
+            onClose={() => setIsViewStatusOpen(false)}
+            statuses={storeStatuses}
+            storeName={(data as any)?.store_name || ''}
+            isMerchant={true}
+            onStatusDeleted={async () => {
+              await refetchStatuses();
+              queryClient.invalidateQueries({ queryKey: ['store-statuses-merchant', activeStoreId] });
+            }}
+          />
+        )}
       </div>
     </div>
   );
