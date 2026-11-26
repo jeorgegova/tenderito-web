@@ -46,6 +46,18 @@ import { CreateStoreStatusModal } from '../components/CreateStoreStatusModal';
 import { StoreStatusViewerModal } from '../components/StoreStatusViewerModal';
 import { fetchMerchantStoreStatuses } from '../services/storeStatuses';
 
+function formatPlanDescription(description?: string | null): string {
+  if (!description) return '';
+  const parts = description.split('+').map(p => p.trim()).filter(Boolean);
+  if (parts.length <= 1) return description;
+  return parts
+    .map((part, idx) => {
+      const capitalized = part.charAt(0).toUpperCase() + part.slice(1);
+      return idx < parts.length - 1 ? `${capitalized} +` : capitalized;
+    })
+    .join('\n');
+}
+
 export function ProfileScreen() {
   const navigate = useNavigate();
   const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
@@ -525,8 +537,15 @@ export function ProfileScreen() {
                   <div style={{ fontSize: 17, fontWeight: 800, color: Colors.text }}>
                     {p.name}
                   </div>
-                  <div style={{ fontSize: 13, color: Colors.textSecondary, marginTop: 2 }}>
-                    {p.description}
+                  <div
+                    style={{
+                      fontSize: 13,
+                      color: Colors.textSecondary,
+                      marginTop: 2,
+                      whiteSpace: 'pre-line',
+                      lineHeight: '1.45',
+                    }}>
+                    {formatPlanDescription(p.description)}
                   </div>
 
                   <div

@@ -11,6 +11,7 @@ import {
   IoPersonCircleOutline,
 } from 'react-icons/io5';
 import { Colors } from '../theme';
+import { showAlert } from './ui/AlertModal';
 import {
   StoreStatus,
   StoreStatusViewItem,
@@ -277,26 +278,58 @@ export function StoreStatusViewerModal({
     setIsPaused(false);
   };
 
-  const handleDelete = async () => {
-    if (!currentStatus) return;
-    if (!window.confirm('¿Deseas eliminar este estado publicitario?')) return;
-
-    setIsDeleting(true);
+  const handleDelete = () => {
+    if (!currentStatus || isDeleting) return;
     setIsPaused(true);
-    const res = await deleteStoreStatus(currentStatus.id, currentStatus.media_path);
-    setIsDeleting(false);
 
-    if (res.success) {
-      onStatusDeleted?.(currentStatus.id);
-      if (statuses.length <= 1) {
-        onClose();
-      } else {
-        goToNext();
-      }
-    } else {
-      alert(res.error || 'No se pudo eliminar el estado.');
-      setIsPaused(false);
-    }
+    showAlert({
+      title: '¿Eliminar estado publicitario?',
+      message: 'Esta acción no se puede deshacer. ¿Deseas eliminar este estado?',
+      type: 'destructive',
+      buttons: [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+          onPress: () => {
+            setIsPaused(false);
+          },
+        },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            setIsDeleting(true);
+            try {
+              const res = await deleteStoreStatus(currentStatus.id, currentStatus.media_path);
+              if (res.success) {
+                onStatusDeleted?.(currentStatus.id);
+                if (statuses.length <= 1) {
+                  onClose();
+                } else {
+                  goToNext();
+                }
+              } else {
+                showAlert({
+                  title: 'Error',
+                  message: res.error || 'No se pudo eliminar el estado.',
+                  type: 'destructive',
+                });
+                setIsPaused(false);
+              }
+            } catch (error) {
+              showAlert({
+                title: 'Error',
+                message: 'Ocurrió un error inesperado al eliminar el estado.',
+                type: 'destructive',
+              });
+              setIsPaused(false);
+            } finally {
+              setIsDeleting(false);
+            }
+          },
+        },
+      ],
+    });
   };
 
   // Gestión de gestos (Swipe horizontal + Tap para navegación fluida)
