@@ -987,19 +987,45 @@ export function CustomerHomeScreen() {
               gap: 14,
             }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-              <div
-                style={{
-                  width: 52,
-                  height: 52,
-                  borderRadius: 18,
-                  backgroundColor: Colors.primaryLight,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}>
-                <IoStorefront size={28} color={Colors.primary} />
-              </div>
+              {(() => {
+                const statusesForSelectedStore = storeStatusesMap[selectedStore.store_id] || [];
+                const unviewedCount = statusesForSelectedStore.filter(s => !s.has_viewed).length;
+
+                return (
+                  <StoreStatusRing
+                    size={56}
+                    strokeWidth={2.5}
+                    count={statusesForSelectedStore.length}
+                    unviewedCount={unviewedCount}
+                    onClick={
+                      statusesForSelectedStore.length > 0
+                        ? () => {
+                            setSelectedStoreForStatus({
+                              storeId: selectedStore.store_id,
+                              storeName,
+                              statuses: statusesForSelectedStore,
+                            });
+                          }
+                        : undefined
+                    }>
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        borderRadius: '50%',
+                        backgroundColor: isPaid ? '#DCFCE7' : '#FEE2E2',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}>
+                      <IoStorefront
+                        size={26}
+                        color={isPaid ? '#15803D' : Colors.destructive}
+                      />
+                    </div>
+                  </StoreStatusRing>
+                );
+              })()}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 20, fontWeight: 800, color: Colors.text }}>
                   {storeName}

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Colors } from '../../theme';
 
 export interface MagnetFilterOption<T extends string = string> {
@@ -54,14 +54,17 @@ export function MagnetFilterBar<T extends string = string>({
     const left = btnRect.left - trackRect.left + track.scrollLeft;
     const width = btnRect.width;
 
-    setPillStyle({
-      left,
-      width,
-      ready: true,
-    });
+    if (width > 0) {
+      setPillStyle({
+        left,
+        width,
+        ready: true,
+      });
+    }
   }, [currentKey]);
 
-  useEffect(() => {
+  // Medición de layout sincrónica antes del primer render en pantalla
+  useLayoutEffect(() => {
     updatePill();
   }, [updatePill, options]);
 
@@ -85,18 +88,27 @@ export function MagnetFilterBar<T extends string = string>({
     });
     ro.observe(track);
 
+    Object.values(buttonRefs.current).forEach(btn => {
+      if (btn) ro.observe(btn);
+    });
+
     window.addEventListener('resize', updatePill);
 
     return () => {
       ro.disconnect();
       window.removeEventListener('resize', updatePill);
     };
-  }, [updatePill]);
+  }, [updatePill, options]);
 
   const handleSelect = (key: T) => {
     if (currentKey === key) return;
     setOptimisticKey(key);
     onSelect(key);
+
+    const btn = buttonRefs.current[key];
+    if (btn && scrollable) {
+      btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    }
   };
 
   return (
@@ -112,6 +124,7 @@ export function MagnetFilterBar<T extends string = string>({
         padding: TRACK_PADDING,
         border: '1px solid #E2E8F0',
         position: 'relative',
+        isolation: 'isolate',
         overflowX: scrollable ? 'auto' : 'hidden',
         whiteSpace: 'nowrap',
         width: '100%',
@@ -132,12 +145,13 @@ export function MagnetFilterBar<T extends string = string>({
             borderRadius: 999,
             border: `1.5px solid ${Colors.primary}`,
             boxShadow: '0 2px 6px rgba(255, 107, 0, 0.14), 0 1px 3px rgba(20, 32, 51, 0.06)',
-            transform: `translate3d(${pillStyle.left}px, 0, 0)`,
+            transform: `translateX(${pillStyle.left}px)`,
+            WebkitTransform: `translateX(${pillStyle.left}px)`,
             transition: isFirstRender.current
               ? 'none'
-              : 'transform 0.38s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)',
+              : 'transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.32s cubic-bezier(0.34, 1.56, 0.64, 1)',
             pointerEvents: 'none',
-            zIndex: 0,
+            zIndex: 1,
             boxSizing: 'border-box',
           }}
         />
@@ -162,43 +176,52 @@ export function MagnetFilterBar<T extends string = string>({
               border: !pillStyle.ready && isSelected ? `1.5px solid ${Colors.primary}` : '1.5px solid transparent',
               boxShadow: !pillStyle.ready && isSelected ? '0 2px 6px rgba(255, 107, 0, 0.14)' : 'none',
               color: isSelected ? Colors.primaryDark : Colors.textSecondary,
-              WebkitTextFillColor: isSelected ? Colors.primaryDark : Colors.textSecondary,
               fontSize: 12,
               fontWeight: isSelected ? 800 : 600,
               cursor: 'pointer',
               position: 'relative',
-              zIndex: 1,
+              zIndex: 3,
+              WebkitAppearance: 'none',
+              appearance: 'none',
+              WebkitTapHighlightColor: 'transparent',
               outline: 'none',
               userSelect: 'none',
               textAlign: 'center',
               boxSizing: 'border-box',
               minWidth: 0,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transform: 'translateZ(0)',
+              WebkitTransform: 'translateZ(0)',
               transition: 'color 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), font-weight 0.22s ease',
             }}
             onMouseDown={e => {
-              e.currentTarget.style.transform = 'scale(0.96)';
+              e.currentTarget.style.transform = 'scale(0.96) translateZ(0)';
             }}
             onMouseUp={e => {
-              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.transform = 'scale(1) translateZ(0)';
             }}
             onMouseLeave={e => {
-              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.transform = 'scale(1) translateZ(0)';
             }}
             onTouchStart={e => {
-              e.currentTarget.style.transform = 'scale(0.96)';
+              e.currentTarget.style.transform = 'scale(0.96) translateZ(0)';
             }}
             onTouchEnd={e => {
-              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.transform = 'scale(1) translateZ(0)';
             }}>
             <span
               style={{
-                display: 'block',
+                display: 'inline-block',
+                maxWidth: '100%',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
+                lineHeight: 1.25,
                 color: isSelected ? Colors.primaryDark : Colors.textSecondary,
-                WebkitTextFillColor: isSelected ? Colors.primaryDark : Colors.textSecondary,
                 fontWeight: isSelected ? 800 : 600,
+                pointerEvents: 'none',
               }}>
               {opt.label}
             </span>

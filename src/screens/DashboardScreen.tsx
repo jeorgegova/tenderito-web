@@ -451,17 +451,19 @@ export function DashboardScreen() {
               Pasaron su fecha de pago acordada
             </span>
           </div>
-          <button
-            onClick={() => navigate('/alerts')}
-            style={{
-              color: Colors.primary,
-              fontSize: 13,
-              fontWeight: 700,
-              background: 'none',
-              cursor: 'pointer',
-            }}>
-            Ver todo
-          </button>
+          {(overdue.data ?? []).length > 0 && (
+            <button
+              onClick={() => navigate('/alerts')}
+              style={{
+                color: Colors.primary,
+                fontSize: 13,
+                fontWeight: 700,
+                background: 'none',
+                cursor: 'pointer',
+              }}>
+              Ver más
+            </button>
+          )}
         </div>
 
         {overdue.isLoading ? (

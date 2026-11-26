@@ -12,6 +12,7 @@ import { useStore } from '../../store/useStore';
 import { Colors } from '../../theme';
 import { useSync } from '../../hooks/useSync';
 import { confirmLogout } from '../../lib/session';
+import { calculateSubscriptionStatus } from '../../services/plans';
 
 export interface HeaderProps {
   title: string;
@@ -22,6 +23,7 @@ export interface HeaderProps {
   sessionName?: string;
   sessionRole?: string;
   showSyncButton?: boolean;
+  isPro?: boolean;
 }
 
 export function Header({
@@ -33,6 +35,7 @@ export function Header({
   sessionName,
   sessionRole,
   showSyncButton = true,
+  isPro: isProProp,
 }: HeaderProps) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -54,6 +57,14 @@ export function Header({
   const profile = useStore(s => s.profile);
   const activeName = sessionName || profile?.merchant_name || 'Tendero';
   const activeRole = sessionRole || (profile ? 'Tendero' : '');
+
+  // Detectar si la suscripción es de pago activa (Todo plan de pago es PRO)
+  const subStatus = profile ? calculateSubscriptionStatus(profile) : null;
+  const isPaidActive = subStatus
+    ? subStatus.effectivePlan.toLowerCase() !== 'free' && !subStatus.isExpired
+    : Boolean(profile?.subscription_plan && profile.subscription_plan.toLowerCase() !== 'free');
+  const isPro = isProProp !== undefined ? isProProp : isPaidActive;
+
   const { sync, isSyncing, isOnline } = useSync();
 
   const handleManualSync = async (e: React.MouseEvent) => {
@@ -330,7 +341,7 @@ export function Header({
               <button
                 type="button"
                 onClick={() => setMenuOpen(prev => !prev)}
-                title={`Usuario: ${activeName}. Clic para abrir opciones`}
+                title={`Usuario: ${activeName}${isPro ? ' (Plan Pro)' : ''}. Clic para abrir opciones`}
                 aria-haspopup="true"
                 aria-expanded={menuOpen}
                 style={{
@@ -338,13 +349,15 @@ export function Header({
                   alignItems: 'center',
                   gap: 8,
                   backgroundColor: menuOpen ? '#FFF7F2' : '#FFFFFF',
-                  border: `1.5px solid ${menuOpen ? Colors.primary : Colors.border}`,
+                  border: `1.5px solid ${menuOpen ? Colors.primary : isPro ? '#FED7AA' : Colors.border}`,
                   padding: '6px 12px',
                   borderRadius: 24,
                   boxShadow: menuOpen
                     ? '0 4px 14px rgba(249, 115, 22, 0.15)'
+                    : isPro
+                    ? '0 2px 10px rgba(249, 115, 22, 0.08)'
                     : '0 2px 10px rgba(0, 0, 0, 0.05)',
-                  maxWidth: 155,
+                  maxWidth: 165,
                   cursor: 'pointer',
                   outline: 'none',
                   transition: 'all 0.2s ease',
@@ -352,17 +365,52 @@ export function Header({
                 }}>
                 <div
                   style={{
+                    position: 'relative',
                     width: 26,
                     height: 26,
-                    borderRadius: 13,
-                    backgroundColor: Colors.primaryLight,
-                    color: Colors.primary,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0,
                   }}>
-                  <IoPersonOutline size={14} />
+                  <div
+                    style={{
+                      width: 26,
+                      height: 26,
+                      borderRadius: 13,
+                      backgroundColor: isPro ? '#FFF7ED' : Colors.primaryLight,
+                      color: Colors.primary,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: isPro ? `2px solid ${Colors.primary}` : 'none',
+                      boxSizing: 'border-box',
+                    }}>
+                    <IoPersonOutline size={13} />
+                  </div>
+                  {isPro && (
+                    <span
+                      style={{
+                        position: 'absolute',
+                        bottom: -4,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        backgroundColor: Colors.primary,
+                        color: '#FFFFFF',
+                        fontSize: 7,
+                        fontWeight: 900,
+                        letterSpacing: 0.5,
+                        padding: '1px 3.5px',
+                        borderRadius: 6,
+                        lineHeight: 1,
+                        border: '1.2px solid #FFFFFF',
+                        boxShadow: '0 1px 3px rgba(249, 115, 22, 0.4)',
+                        zIndex: 2,
+                        pointerEvents: 'none',
+                      }}>
+                      PRO
+                    </span>
+                  )}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
                   {activeRole && (
@@ -430,17 +478,52 @@ export function Header({
                     }}>
                     <div
                       style={{
+                        position: 'relative',
                         width: 32,
                         height: 32,
-                        borderRadius: 16,
-                        backgroundColor: Colors.primaryLight,
-                        color: Colors.primary,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         flexShrink: 0,
                       }}>
-                      <IoPersonOutline size={16} />
+                      <div
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 16,
+                          backgroundColor: isPro ? '#FFF7ED' : Colors.primaryLight,
+                          color: Colors.primary,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          border: isPro ? `2px solid ${Colors.primary}` : 'none',
+                          boxSizing: 'border-box',
+                        }}>
+                        <IoPersonOutline size={16} />
+                      </div>
+                      {isPro && (
+                        <span
+                          style={{
+                            position: 'absolute',
+                            bottom: -4,
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            backgroundColor: Colors.primary,
+                            color: '#FFFFFF',
+                            fontSize: 7.5,
+                            fontWeight: 900,
+                            letterSpacing: 0.5,
+                            padding: '1px 4px',
+                            borderRadius: 6,
+                            lineHeight: 1,
+                            border: '1.2px solid #FFFFFF',
+                            boxShadow: '0 1px 3px rgba(249, 115, 22, 0.4)',
+                            zIndex: 2,
+                            pointerEvents: 'none',
+                          }}>
+                          PRO
+                        </span>
+                      )}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div
@@ -456,12 +539,32 @@ export function Header({
                       </div>
                       <div
                         style={{
-                          fontSize: 10,
-                          fontWeight: 600,
-                          color: Colors.textSecondary,
-                          marginTop: 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          marginTop: 2,
                         }}>
-                        {activeRole || 'Sesión activa'}
+                        <span
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 600,
+                            color: Colors.textSecondary,
+                          }}>
+                          {activeRole || 'Sesión activa'}
+                        </span>
+                        {isPro && (
+                          <span
+                            style={{
+                              fontSize: 9.5,
+                              fontWeight: 800,
+                              color: Colors.primary,
+                              backgroundColor: '#FFEDD5',
+                              padding: '1px 6px',
+                              borderRadius: 8,
+                            }}>
+                            Plan Pro
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>

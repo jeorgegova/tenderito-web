@@ -52,12 +52,47 @@ export function StoreStatusViewerModal({
   const [isLoadingViews, setIsLoadingViews] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Registro de imágenes ya cargadas/en caché para visualización instantánea y fluida
+  const [loadedMap, setLoadedMap] = useState<Record<string, boolean>>({});
+  const loadedUrlsRef = useRef<Set<string>>(new Set());
+
   const startTimeRef = useRef<number>(Date.now());
   const animFrameRef = useRef<number | null>(null);
   const lastNavTimeRef = useRef<number>(0);
 
   // Registro de toque para gestos horizontales (swipe) vs tap
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+
+  const currentStatus = statuses[currentIndex];
+  const currentMediaUrl = currentStatus?.media_url;
+  const isCurrentMediaReady = !currentMediaUrl || Boolean(loadedMap[currentMediaUrl]);
+
+  const markMediaLoaded = useCallback((url: string) => {
+    if (!url) return;
+    loadedUrlsRef.current.add(url);
+    setLoadedMap(prev => {
+      if (prev[url]) return prev;
+      return { ...prev, [url]: true };
+    });
+  }, []);
+
+  // Pre-carga silenciosa en segundo plano de historias adyacentes para transición instantánea tipo WhatsApp
+  useEffect(() => {
+    if (!isOpen || statuses.length === 0) return;
+
+    const indicesToPreload = [currentIndex, currentIndex + 1, currentIndex + 2, currentIndex - 1];
+    indicesToPreload.forEach(idx => {
+      if (idx >= 0 && idx < statuses.length) {
+        const url = statuses[idx]?.media_url;
+        if (url && !loadedUrlsRef.current.has(url)) {
+          const img = new Image();
+          img.src = url;
+          img.onload = () => markMediaLoaded(url);
+          img.onerror = () => markMediaLoaded(url);
+        }
+      }
+    });
+  }, [isOpen, currentIndex, statuses, markMediaLoaded]);
 
   useEffect(() => {
     if (isOpen) {
@@ -69,7 +104,21 @@ export function StoreStatusViewerModal({
     }
   }, [isOpen, initialIndex, statuses.length]);
 
-  const currentStatus = statuses[currentIndex];
+  // Reiniciar barra de progreso al cambiar de estado
+  useEffect(() => {
+    setProgress(0);
+    lastNavTimeRef.current = Date.now();
+  }, [currentIndex]);
+
+  // Bloquear scroll de la página web al abrir el visor
+  useEffect(() => {
+    if (!isOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [isOpen]);
 
   // Marcar como visto cuando el cliente visualiza un estado
   useEffect(() => {
@@ -102,7 +151,7 @@ export function StoreStatusViewerModal({
 
   const goToNext = useCallback(() => {
     const now = Date.now();
-    if (now - lastNavTimeRef.current < 380) return;
+    if (now - lastNavTimeRef.current < 220) return;
     lastNavTimeRef.current = now;
 
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
@@ -121,7 +170,7 @@ export function StoreStatusViewerModal({
 
   const goToPrev = useCallback(() => {
     const now = Date.now();
-    if (now - lastNavTimeRef.current < 380) return;
+    if (now - lastNavTimeRef.current < 220) return;
     lastNavTimeRef.current = now;
 
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
@@ -137,10 +186,38 @@ export function StoreStatusViewerModal({
     });
   }, []);
 
-  // Manejo del temporizador de avance tipo WhatsApp Stories (15 segundos)
+  // Navegación por teclado en Web (Flechas izquierda/derecha, Espacio, Escape)
   useEffect(() => {
-    if (!isOpen || isPaused || showViewsSheet || statuses.length === 0) {
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      } else if (e.key === 'ArrowRight' || e.key === ' ') {
+        e.preventDefault();
+        goToNext();
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        goToPrev();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, goToNext, goToPrev, onClose]);
+
+  // Manejo del temporizador de avance tipo WhatsApp Stories (15 segundos)
+  // IMPORTANTE: NO arranca hasta que la imagen haya terminado de cargar (isCurrentMediaReady)
+  useEffect(() => {
+    if (
+      !isOpen ||
+      isPaused ||
+      showViewsSheet ||
+      statuses.length === 0 ||
+      !isCurrentMediaReady
+    ) {
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current);
+        animFrameRef.current = null;
+      }
       return;
     }
 
@@ -161,9 +238,20 @@ export function StoreStatusViewerModal({
     animFrameRef.current = requestAnimationFrame(tick);
 
     return () => {
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current);
+        animFrameRef.current = null;
+      }
     };
-  }, [isOpen, isPaused, showViewsSheet, currentIndex, statuses.length, goToNext]);
+  }, [
+    isOpen,
+    isPaused,
+    showViewsSheet,
+    currentIndex,
+    statuses.length,
+    isCurrentMediaReady,
+    goToNext,
+  ]);
 
   // Consultar lista de vistas cuando se abre el bottom sheet
   const handleOpenViewsSheet = async () => {
@@ -211,7 +299,7 @@ export function StoreStatusViewerModal({
     }
   };
 
-  // Gestión de gestos (Swipe horizontal + Tap para navegación)
+  // Gestión de gestos (Swipe horizontal + Tap para navegación fluida)
   const handlePointerDown = (clientX: number, clientY: number) => {
     setIsPaused(true);
     touchStartRef.current = { x: clientX, y: clientY, time: Date.now() };
@@ -227,7 +315,7 @@ export function StoreStatusViewerModal({
     touchStartRef.current = null;
 
     // 1. Detección de Swipe horizontal
-    if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY)) {
+    if (Math.abs(deltaX) > 35 && Math.abs(deltaX) > Math.abs(deltaY)) {
       if (deltaX < 0) {
         // Deslizó a la izquierda -> siguiente
         goToNext();
@@ -238,8 +326,8 @@ export function StoreStatusViewerModal({
       return;
     }
 
-    // 2. Detección de Tap rápido
-    if (duration < 280 && Math.abs(deltaX) < 15 && Math.abs(deltaY) < 15) {
+    // 2. Detección de Tap rápido con umbral responsivo para web y móvil
+    if (duration < 350 && Math.abs(deltaX) < 25 && Math.abs(deltaY) < 25) {
       if (clientX < containerWidth * 0.35) {
         goToPrev();
       } else {
@@ -275,6 +363,8 @@ export function StoreStatusViewerModal({
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
+          touchAction: 'none',
+          overscrollBehavior: 'none',
         }}
         onPointerDown={e => {
           if ((e.target as HTMLElement)?.closest('button')) return;
@@ -438,15 +528,58 @@ export function StoreStatusViewerModal({
             justifyContent: 'center',
             backgroundColor: currentStatus.media_url ? '#000000' : currentStatus.bg_color || Colors.primary,
             position: 'relative',
+            overflow: 'hidden',
           }}>
+          {/* Spinner de carga estilo WhatsApp con fondo negro si la imagen no está lista */}
+          {currentStatus.media_url && !isCurrentMediaReady && (
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: '#000000',
+                zIndex: 10,
+              }}>
+              <div
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: '50%',
+                  border: '3.5px solid rgba(255, 255, 255, 0.15)',
+                  borderTopColor: '#FFFFFF',
+                  animation: 'spin 0.75s linear infinite',
+                }}
+              />
+            </div>
+          )}
+
           {currentStatus.media_url ? (
             <img
+              key={currentStatus.id}
               src={currentStatus.media_url}
               alt="Estado publicitario"
+              draggable={false}
+              onLoad={() => {
+                if (currentStatus.media_url) {
+                  markMediaLoaded(currentStatus.media_url);
+                }
+              }}
+              onError={() => {
+                if (currentStatus.media_url) {
+                  markMediaLoaded(currentStatus.media_url);
+                }
+              }}
               style={{
                 width: '100%',
                 height: '100%',
                 objectFit: 'contain',
+                opacity: isCurrentMediaReady ? 1 : 0,
+                transition: 'opacity 0.2s ease-out',
+                userSelect: 'none',
+                pointerEvents: 'none',
               }}
             />
           ) : (

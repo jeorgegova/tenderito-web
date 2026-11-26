@@ -103,6 +103,8 @@ button {
   cursor: pointer;
   border: none;
   background: none;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 @keyframes spin {

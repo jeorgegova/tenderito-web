@@ -58,7 +58,14 @@ export async function saveOfflineSession(params: {
       updatedAt: new Date().toISOString(),
     };
 
-    // 1. Guardar en AsyncStorage / localStorage
+    // 1. Guardar en AsyncStorage / localStorage de forma síncrona y asíncrona
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem(OFFLINE_SESSION_STORAGE_KEY, JSON.stringify(data));
+        window.localStorage.setItem(EXPLICIT_LOGOUT_STORAGE_KEY, 'false');
+      }
+    } catch {}
+
     await AsyncStorage.setItem(OFFLINE_SESSION_STORAGE_KEY, JSON.stringify(data));
     await AsyncStorage.setItem(EXPLICIT_LOGOUT_STORAGE_KEY, 'false');
 
@@ -83,6 +90,13 @@ export async function saveOfflineSession(params: {
  */
 export async function markExplicitLogout(): Promise<void> {
   try {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem(EXPLICIT_LOGOUT_STORAGE_KEY, 'true');
+        window.localStorage.removeItem(OFFLINE_SESSION_STORAGE_KEY);
+      }
+    } catch {}
+
     await AsyncStorage.setItem(EXPLICIT_LOGOUT_STORAGE_KEY, 'true');
     await AsyncStorage.removeItem(OFFLINE_SESSION_STORAGE_KEY);
 
@@ -103,11 +117,14 @@ export async function isExplicitLogout(): Promise<boolean> {
   try {
     const flag = await AsyncStorage.getItem(EXPLICIT_LOGOUT_STORAGE_KEY);
     if (flag === 'true') return true;
+    if (flag === 'false') return false;
 
+    // Solo consultar SQLite si no hay un indicador definido en AsyncStorage/localStorage
     try {
       const db = await getDbConnection();
       const dbFlag = await getConfigParam(db, 'is_logged_out');
       if (dbFlag === '1') return true;
+      if (dbFlag === '0') return false;
     } catch (_e) {}
 
     return false;

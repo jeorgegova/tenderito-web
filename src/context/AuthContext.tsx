@@ -16,6 +16,8 @@ import {
   getPersistedOfflineSession,
   buildSyntheticSession,
   resolveUserType,
+  OFFLINE_SESSION_STORAGE_KEY,
+  EXPLICIT_LOGOUT_STORAGE_KEY,
   type UserType,
 } from '../services/sessionPersistence';
 
@@ -34,10 +36,76 @@ export interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [userType, setUserType] = useState<UserType | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // Inicialización sincrónica instantánea desde localStorage para conservar la sesión en 0ms
+  // ante recargas de página, cambios de código HMR o navegación
+  const [session, setSession] = useState<Session | null>(() => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const isLoggedOut = window.localStorage.getItem(EXPLICIT_LOGOUT_STORAGE_KEY);
+        if (isLoggedOut === 'true') return null;
+
+        const offline = window.localStorage.getItem(OFFLINE_SESSION_STORAGE_KEY);
+        if (offline) {
+          const parsed = JSON.parse(offline);
+          if (parsed?.userId) {
+            return buildSyntheticSession(parsed);
+          }
+        }
+      }
+    } catch {}
+    return null;
+  });
+
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const isLoggedOut = window.localStorage.getItem(EXPLICIT_LOGOUT_STORAGE_KEY);
+        if (isLoggedOut === 'true') return null;
+
+        const offline = window.localStorage.getItem(OFFLINE_SESSION_STORAGE_KEY);
+        if (offline) {
+          const parsed = JSON.parse(offline);
+          if (parsed?.userId) {
+            return buildSyntheticSession(parsed).user;
+          }
+        }
+      }
+    } catch {}
+    return null;
+  });
+
+  const [userType, setUserType] = useState<UserType | null>(() => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const isLoggedOut = window.localStorage.getItem(EXPLICIT_LOGOUT_STORAGE_KEY);
+        if (isLoggedOut === 'true') return null;
+
+        const offline = window.localStorage.getItem(OFFLINE_SESSION_STORAGE_KEY);
+        if (offline) {
+          const parsed = JSON.parse(offline);
+          if (parsed?.userType) {
+            return parsed.userType;
+          }
+        }
+      }
+    } catch {}
+    return null;
+  });
+
+  const [isLoading, setIsLoading] = useState<boolean>(() => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const isLoggedOut = window.localStorage.getItem(EXPLICIT_LOGOUT_STORAGE_KEY);
+        if (isLoggedOut === 'true') return false;
+
+        const offline = window.localStorage.getItem(OFFLINE_SESSION_STORAGE_KEY);
+        if (offline) {
+          return false;
+        }
+      }
+    } catch {}
+    return true;
+  });
 
   const applySession = useCallback(async (nextSession: Session | null) => {
     if (nextSession?.user) {

@@ -13,6 +13,7 @@ import { MagnetRoleSwitch } from '../components/ui/MagnetRoleSwitch';
 import { showAlert } from '../components/ui/AlertModal';
 import { supabase } from '../lib/supabase';
 import { customerAuthEmail } from '../lib/customerAuth';
+import { EXPLICIT_LOGOUT_STORAGE_KEY } from '../services/sessionPersistence';
 import { Colors, Radius } from '../theme';
 import { getAppVersion } from '../services/deviceService';
 import fondoLogin from '../assets/FondoLogin.png';
@@ -42,6 +43,12 @@ export function LoginScreen() {
     }
 
     setLoading(true);
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem(EXPLICIT_LOGOUT_STORAGE_KEY, 'false');
+      }
+    } catch {}
+
     const { error } = await supabase.auth.signInWithPassword({
       email: role === 'store' ? email.trim() : customerAuthEmail(document),
       password,

@@ -97,7 +97,7 @@ export function ProfileScreen() {
   const currentPlan = plans.find(
     p => p.id.toLowerCase() === subStatus.effectivePlan.toLowerCase(),
   );
-  const customerLimit = currentPlan?.customer_limit ?? (subStatus.effectivePlan === 'pro' ? 999999 : 10);
+  const customerLimit = currentPlan?.customer_limit ?? (subStatus.effectivePlan !== 'free' ? 999999 : 10);
 
   async function handleSwitchStore(storeId: string) {
     if (storeId === currentStoreId) return;
@@ -201,8 +201,22 @@ export function ProfileScreen() {
             strokeWidth={3}
             count={storeStatuses.length}
             unviewedCount={storeStatuses.length}
-            showAddBadge={hasActivePaidPlan}
+            showAddBadge={true}
             onAddPress={() => {
+              if (!hasActivePaidPlan) {
+                showAlert({
+                  title: 'Función de suscripción',
+                  message:
+                    'Los estados publicitarios están incluidos en la suscripción de pago. Activa o renueva tu plan para promocionar ofertas y productos a tus clientes.',
+                  type: 'info',
+                });
+                const plansSec = document.getElementById('seccion-planes-suscripcion');
+                if (plansSec) {
+                  plansSec.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                return;
+              }
+
               if (storeStatuses.length >= 3) {
                 showAlert(
                   'Límite alcanzado',
@@ -217,6 +231,17 @@ export function ProfileScreen() {
                 setIsViewStatusOpen(true);
               } else if (hasActivePaidPlan) {
                 setIsCreateStatusOpen(true);
+              } else {
+                showAlert({
+                  title: 'Función de suscripción',
+                  message:
+                    'Los estados publicitarios están incluidos en la suscripción de pago. Activa o renueva tu plan para promocionar ofertas y productos a tus clientes.',
+                  type: 'info',
+                });
+                const plansSec = document.getElementById('seccion-planes-suscripcion');
+                if (plansSec) {
+                  plansSec.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
               }
             }}
             style={{ marginBottom: 12 }}>
@@ -463,7 +488,7 @@ export function ProfileScreen() {
         )}
 
         {/* Planes de suscripción */}
-        <div>
+        <div id="seccion-planes-suscripcion">
           <h3 style={{ fontSize: 16, fontWeight: 800, color: Colors.text, margin: '4px 0 10px' }}>
             Planes de suscripción
           </h3>
