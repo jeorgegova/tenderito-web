@@ -163,8 +163,8 @@ export function CreateStoreStatusModal({
       return;
     }
 
-    if (trimmedCaption.length > 120) {
-      setErrorMessage('La descripción no puede exceder 120 caracteres.');
+    if (trimmedCaption.length > 150) {
+      setErrorMessage('La descripción no puede exceder 150 caracteres.');
       return;
     }
 
@@ -225,9 +225,12 @@ export function CreateStoreStatusModal({
         justifyContent: 'center',
         padding: 16,
       }}
-      onClick={onClose}>
+      onClick={e => {
+        if (e.target === e.currentTarget && !isSubmitting) onClose();
+      }}>
       <div
         style={{
+          position: 'relative',
           width: '100%',
           maxWidth: 440,
           maxHeight: '92vh',
@@ -275,18 +278,22 @@ export function CreateStoreStatusModal({
 
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => {
+              if (!isSubmitting) onClose();
+            }}
+            disabled={isSubmitting}
             style={{
               width: 32,
               height: 32,
               borderRadius: 16,
               border: 'none',
               backgroundColor: '#F1F5F9',
-              color: Colors.textSecondary,
+              color: isSubmitting ? '#CBD5E1' : Colors.textSecondary,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              cursor: 'pointer',
+              cursor: isSubmitting ? 'not-allowed' : 'pointer',
+              opacity: isSubmitting ? 0.6 : 1,
             }}>
             <IoClose size={20} />
           </button>
@@ -360,6 +367,7 @@ export function CreateStoreStatusModal({
                 <button
                   type="button"
                   onClick={handleRemoveImage}
+                  disabled={isSubmitting}
                   style={{
                     position: 'absolute',
                     top: 10,
@@ -374,7 +382,8 @@ export function CreateStoreStatusModal({
                     display: 'flex',
                     alignItems: 'center',
                     gap: 6,
-                    cursor: 'pointer',
+                    cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                    opacity: isSubmitting ? 0.6 : 1,
                   }}>
                   <IoTrashOutline size={14} /> Cambiar
                 </button>
@@ -406,7 +415,9 @@ export function CreateStoreStatusModal({
                   borderRadius: 14,
                   border: '1.5px dashed #CBD5E1',
                   backgroundColor: '#FAFAFA',
-                  cursor: 'pointer',
+                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                  pointerEvents: isSubmitting ? 'none' : 'auto',
+                  opacity: isSubmitting ? 0.6 : 1,
                   transition: 'all 0.15s ease',
                 }}>
                 <IoImageOutline size={20} color={Colors.primary} />
@@ -420,13 +431,14 @@ export function CreateStoreStatusModal({
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
                   onChange={handleFileChange}
+                  disabled={isSubmitting}
                   style={{ display: 'none' }}
                 />
               </label>
             )}
           </div>
 
-          {/* 2. Descripción / Caption (Obligatorio, máx 120 chars) */}
+          {/* 2. Descripción / Caption (Obligatorio, máx 150 chars) */}
           <div>
             <div
               style={{
@@ -449,29 +461,31 @@ export function CreateStoreStatusModal({
                 style={{
                   fontSize: 11,
                   fontWeight: 700,
-                  color: caption.length > 120 ? Colors.destructive : Colors.textSecondary,
+                  color: caption.length > 150 ? Colors.destructive : Colors.textSecondary,
                 }}>
-                {caption.length}/120
+                {caption.length}/150
               </span>
             </div>
             <textarea
               rows={2}
-              maxLength={120}
+              maxLength={150}
               value={caption}
+              disabled={isSubmitting}
               onChange={e => setCaption(e.target.value)}
               placeholder="Ej: Huevos en rebaja, cubeta a $15.000"
               style={{
                 width: '100%',
                 padding: '10px 12px',
                 borderRadius: 12,
-                border: `1.5px solid ${caption.length > 120 ? Colors.destructive : '#E2E8F0'}`,
+                border: `1.5px solid ${caption.length > 150 ? Colors.destructive : '#E2E8F0'}`,
                 outline: 'none',
                 fontSize: 13,
                 fontFamily: 'inherit',
                 color: Colors.text,
                 resize: 'none',
                 boxSizing: 'border-box',
-                backgroundColor: '#FFFFFF',
+                backgroundColor: isSubmitting ? '#F8FAFC' : '#FFFFFF',
+                opacity: isSubmitting ? 0.7 : 1,
               }}
             />
           </div>
@@ -503,6 +517,7 @@ export function CreateStoreStatusModal({
                   <button
                     key={preset.key}
                     type="button"
+                    disabled={isSubmitting}
                     onClick={() => handleApplyPreset(preset.key as any)}
                     style={{
                       flex: 1,
@@ -513,7 +528,8 @@ export function CreateStoreStatusModal({
                       color: isSelected ? Colors.primaryDark : Colors.textSecondary,
                       fontSize: 11.5,
                       fontWeight: isSelected ? 800 : 600,
-                      cursor: 'pointer',
+                      cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                      opacity: isSubmitting ? 0.6 : 1,
                     }}>
                     {preset.label}
                   </button>
@@ -531,10 +547,12 @@ export function CreateStoreStatusModal({
                 padding: '8px 12px',
                 borderRadius: 14,
                 border: '1px solid #E2E8F0',
+                opacity: isSubmitting ? 0.6 : 1,
               }}>
               {/* Botón selector Desde */}
               <button
                 type="button"
+                disabled={isSubmitting}
                 onClick={() => setPickerMode('start')}
                 style={{
                   flex: 1,
@@ -548,7 +566,7 @@ export function CreateStoreStatusModal({
                   color: Colors.text,
                   fontSize: 12,
                   fontWeight: 700,
-                  cursor: 'pointer',
+                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
                 }}>
                 <IoCalendarOutline size={15} color={Colors.primary} />
                 <span>Desde: {formatDateDisplay(startDateYMD)}</span>
@@ -559,6 +577,7 @@ export function CreateStoreStatusModal({
               {/* Botón selector Hasta */}
               <button
                 type="button"
+                disabled={isSubmitting}
                 onClick={() => setPickerMode('end')}
                 style={{
                   flex: 1,
@@ -572,7 +591,7 @@ export function CreateStoreStatusModal({
                   color: Colors.text,
                   fontSize: 12,
                   fontWeight: 700,
-                  cursor: 'pointer',
+                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
                 }}>
                 <IoCalendarOutline size={15} color={Colors.primary} />
                 <span>Hasta: {formatDateDisplay(endDateYMD)}</span>
@@ -605,6 +624,57 @@ export function CreateStoreStatusModal({
             disabled={isSubmitting || isLimitReached || !caption.trim()}
           />
         </div>
+
+        {/* Overlay de carga y bloqueo total durante la publicación */}
+        {isSubmitting && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              backgroundColor: 'rgba(255, 255, 255, 0.92)',
+              backdropFilter: 'blur(4px)',
+              WebkitBackdropFilter: 'blur(4px)',
+              borderRadius: 24,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 100,
+              padding: 24,
+              textAlign: 'center',
+              userSelect: 'none',
+            }}>
+            <div
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: '50%',
+                border: '4px solid #FFE4D6',
+                borderTopColor: Colors.primary,
+                animation: 'spin 0.8s linear infinite',
+                marginBottom: 16,
+              }}
+            />
+            <div
+              style={{
+                fontSize: 17,
+                fontWeight: 800,
+                color: Colors.text,
+                marginBottom: 6,
+              }}>
+              Publicando publicidad…
+            </div>
+            <div
+              style={{
+                fontSize: 13,
+                color: Colors.textSecondary,
+                maxWidth: 280,
+                lineHeight: 1.45,
+              }}>
+              Subiendo imagen y configurando la vigencia de tu estado. Por favor espera un momento.
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Selector de fecha exclusivo y limpio */}
